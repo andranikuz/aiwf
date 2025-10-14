@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "value_map": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "segment": { "type": "string" },
+          "core_message": { "type": "string" },
+          "proof_points": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["segment", "core_message"],
+        "additionalProperties": false
+      }
+    },
+    "primary_goal": { "type": "string" },
+    "budget_level": { "type": "string" }
+  },
+  "required": ["value_map", "primary_goal"],
+  "additionalProperties": false
+}

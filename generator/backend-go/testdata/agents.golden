@@ -1,0 +1,85 @@
+package generated
+
+import (
+    "context"
+    "encoding/json"
+
+    "github.com/andranikuz/aiwf/runtime/go/aiwf"
+)
+var criticOutputSchemaJSON = json.RawMessage("{\n  \"type\": \"object\",\n  \"properties\": {\n    \"score\": {\"type\": \"number\"},\n    \"notes\": {\"type\": \"string\"}\n  }\n}\n")
+var writerOutputSchemaJSON = json.RawMessage("{\n  \"type\": \"object\",\n  \"properties\": {\n    \"draft\": {\"type\": \"string\"},\n    \"duration\": {\"type\": \"number\"}\n  }\n}\n")
+
+type Agents interface {
+    Critic() CriticAgent
+    Writer() WriterAgent
+}
+
+type agents struct {
+    client aiwf.ModelClient
+}
+func (a *agents) Critic() CriticAgent { return &criticAgent{client: a.client} }
+
+type CriticAgent interface {
+    Run(ctx context.Context, input CriticInput) (CriticOutput, *aiwf.Trace, error)
+}
+
+type criticAgent struct {
+    client aiwf.ModelClient
+}
+
+func (a *criticAgent) Run(ctx context.Context, input CriticInput) (CriticOutput, *aiwf.Trace, error) {
+    call := aiwf.ModelCall{
+        Model:           "gpt-4-turbo",
+        SystemPrompt:    "Provide critique",
+        InputSchemaRef:  "critic_input.json",
+        OutputSchemaRef: "critic_output.json",
+        OutputSchema:    criticOutputSchemaJSON,
+        Payload:         input,
+    }
+
+    raw, usage, err := a.client.CallJSONSchema(ctx, call)
+    if err != nil {
+        return CriticOutput{}, nil, err
+    }
+
+    var output CriticOutput
+    if err := json.Unmarshal(raw, &output); err != nil {
+        return CriticOutput{}, nil, err
+    }
+
+    trace := &aiwf.Trace{StepName: "critic", Usage: usage}
+    return output, trace, nil
+}
+func (a *agents) Writer() WriterAgent { return &writerAgent{client: a.client} }
+
+type WriterAgent interface {
+    Run(ctx context.Context, input WriterInput) (WriterOutput, *aiwf.Trace, error)
+}
+
+type writerAgent struct {
+    client aiwf.ModelClient
+}
+
+func (a *writerAgent) Run(ctx context.Context, input WriterInput) (WriterOutput, *aiwf.Trace, error) {
+    call := aiwf.ModelCall{
+        Model:           "gpt-4",
+        SystemPrompt:    "You are a writing assistant",
+        InputSchemaRef:  "writer_input.json",
+        OutputSchemaRef: "writer_output.json",
+        OutputSchema:    writerOutputSchemaJSON,
+        Payload:         input,
+    }
+
+    raw, usage, err := a.client.CallJSONSchema(ctx, call)
+    if err != nil {
+        return WriterOutput{}, nil, err
+    }
+
+    var output WriterOutput
+    if err := json.Unmarshal(raw, &output); err != nil {
+        return WriterOutput{}, nil, err
+    }
+
+    trace := &aiwf.Trace{StepName: "writer", Usage: usage}
+    return output, trace, nil
+}

@@ -1,0 +1,33 @@
+package generated
+
+// NOTE: Ниже показаны заглушки типов. Замените `map[string]any` на структуры,
+//      соответствующие JSON Schema, чтобы получить типизированный SDK.
+// CriticInput соответствует схеме critic_input.json.
+type CriticInput struct {
+    Draft string `json:"draft"`
+}
+// CriticOutput соответствует схеме critic_output.json.
+type CriticOutput struct {
+    Notes string `json:"notes"`
+    Score float64 `json:"score"`
+}
+
+
+// WriterInput соответствует схеме writer_input.json.
+type WriterInput struct {
+    MaxTokens int `json:"maxTokens"`
+    Prompt string `json:"prompt"`
+}
+// WriterOutput соответствует схеме writer_output.json.
+type WriterOutput struct {
+    Draft string `json:"draft"`
+    Duration float64 `json:"duration"`
+}
+
+
+// NovelInput описывает вход workflow.
+type NovelInput = WriterInput
+
+// NovelOutput описывает выход workflow.
+type NovelOutput = CriticOutput
+

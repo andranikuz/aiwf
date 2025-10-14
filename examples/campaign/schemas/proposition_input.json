@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "product_name": { "type": "string" },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "persona": { "type": "string" },
+          "pain_points": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["name", "persona", "pain_points"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["product_name", "segments"],
+  "additionalProperties": false
+}

@@ -1,0 +1,61 @@
+package generated
+
+import (
+    "context"
+    "fmt"
+
+    "github.com/andranikuz/aiwf/runtime/go/aiwf"
+)
+
+type Workflows interface {
+    Novel() NovelWorkflow
+}
+
+type workflows struct {
+    client aiwf.ModelClient
+}
+func (w *workflows) Novel() NovelWorkflow { return &novelWorkflow{client: w.client} }
+
+type NovelWorkflow interface {
+    Run(ctx context.Context, input NovelInput) (NovelOutput, *aiwf.Trace, error)
+}
+
+type novelWorkflow struct {
+    client aiwf.ModelClient
+}
+
+func (r *novelWorkflow) Run(ctx context.Context, input NovelInput) (NovelOutput, *aiwf.Trace, error) {
+    agents := &agents{client: r.client}
+    result := NovelOutput{}
+    traces := make([]*aiwf.Trace, 0, 2)
+    prev := map[string]any{"input": input}
+    {
+        stepInput := WriterInput{}
+        if candidate, ok := prev["input"].(WriterInput); ok {
+            stepInput = candidate
+        }
+
+        output, trace, err := agents.Writer().Run(ctx, stepInput)
+        if err != nil {
+            return result, mergeTraces(traces...), fmt.Errorf("step draft failed: %w", err)
+        }
+        prev["draft"] = output
+        traces = append(traces, trace)
+    }
+    {
+        stepInput := CriticInput{}
+        if candidate, ok := prev["draft"].(CriticInput); ok {
+            stepInput = candidate
+        }
+
+        output, trace, err := agents.Critic().Run(ctx, stepInput)
+        if err != nil {
+            return result, mergeTraces(traces...), fmt.Errorf("step critique failed: %w", err)
+        }
+        prev["critique"] = output
+        traces = append(traces, trace)
+        result = mergeWorkflowOutput(result, NovelOutput(output))
+    }
+
+    return result, mergeTraces(traces...), nil
+}

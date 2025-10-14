@@ -1,0 +1,7 @@
+{
+  "type": "object",
+  "properties": {
+    "score": {"type": "number"},
+    "notes": {"type": "string"}
+  }
+}

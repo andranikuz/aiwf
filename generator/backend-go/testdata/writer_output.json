@@ -1,0 +1,7 @@
+{
+  "type": "object",
+  "properties": {
+    "draft": {"type": "string"},
+    "duration": {"type": "number"}
+  }
+}

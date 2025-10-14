@@ -1,0 +1,62 @@
+package {{ .Package }}
+
+import (
+    "context"
+    "encoding/json"
+
+    "github.com/andranikuz/aiwf/runtime/go/aiwf"
+)
+
+{{- range .Assistants }}
+{{- if .HasOutputSchema }}
+var {{ .OutputSchemaVar }} = json.RawMessage({{ .OutputSchemaLiteral }})
+{{- end }}
+{{- end }}
+
+type Agents interface {
+{{- range .Assistants }}
+    {{ .MethodName }}() {{ .InterfaceName }}
+{{- end }}
+}
+
+type agents struct {
+    client aiwf.ModelClient
+}
+
+{{- range .Assistants }}
+func (a *agents) {{ .MethodName }}() {{ .InterfaceName }} { return &{{ .StructName }}{client: a.client} }
+
+type {{ .InterfaceName }} interface {
+    Run(ctx context.Context, input {{ .MethodName }}Input) ({{ .MethodName }}Output, *aiwf.Trace, error)
+}
+
+type {{ .StructName }} struct {
+    client aiwf.ModelClient
+}
+
+func (a *{{ .StructName }}) Run(ctx context.Context, input {{ .MethodName }}Input) ({{ .MethodName }}Output, *aiwf.Trace, error) {
+    call := aiwf.ModelCall{
+        Model:           {{ printf "%q" .Model }},
+        SystemPrompt:    {{ printf "%q" .SystemPrompt }},
+        InputSchemaRef:  {{ printf "%q" .InputSchemaRef }},
+        OutputSchemaRef: {{ printf "%q" .OutputSchemaRef }},
+        {{- if .HasOutputSchema }}
+        OutputSchema:    {{ .OutputSchemaVar }},
+        {{- end }}
+        Payload:         input,
+    }
+
+    raw, usage, err := a.client.CallJSONSchema(ctx, call)
+    if err != nil {
+        return {{ .MethodName }}Output{}, nil, err
+    }
+
+    var output {{ .MethodName }}Output
+    if err := json.Unmarshal(raw, &output); err != nil {
+        return {{ .MethodName }}Output{}, nil, err
+    }
+
+    trace := &aiwf.Trace{StepName: {{ printf "%q" .Name }}, Usage: usage}
+    return output, trace, nil
+}
+{{- end }}

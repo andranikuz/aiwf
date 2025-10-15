@@ -9,25 +9,34 @@ import (
 )
 
 func TestGenerateService(t *testing.T) {
+	writerInput := filepath.Join("testdata", "writer_input.json")
+	writerOutput := filepath.Join("testdata", "writer_output.json")
+	criticInput := filepath.Join("testdata", "critic_input.json")
+	criticOutput := filepath.Join("testdata", "critic_output.json")
+
 	ir := &core.IR{
 		Assistants: map[string]core.IRAssistant{
 			"writer": {
-				Name:            "writer",
-				Model:           "gpt-4",
-				SystemPrompt:    "You are a writing assistant",
-				InputSchemaRef:  "writer_input.json",
-				OutputSchemaRef: "writer_output.json",
-				InputSchemaPath:  filepath.Join("testdata", "writer_input.json"),
-				OutputSchemaPath: filepath.Join("testdata", "writer_output.json"),
+				Name:             "writer",
+				Model:            "gpt-4",
+				SystemPrompt:     "You are a writing assistant",
+				InputSchemaRef:   "writer_input.json",
+				OutputSchemaRef:  "writer_output.json",
+				InputSchemaPath:  writerInput,
+				OutputSchemaPath: writerOutput,
+				InputSchemaData:  mustRead(t, writerInput),
+				OutputSchemaData: mustRead(t, writerOutput),
 			},
 			"critic": {
-				Name:            "critic",
-				Model:           "gpt-4-turbo",
-				SystemPrompt:    "Provide critique",
-				InputSchemaRef:  "critic_input.json",
-				OutputSchemaRef: "critic_output.json",
-				InputSchemaPath:  filepath.Join("testdata", "critic_input.json"),
-				OutputSchemaPath: filepath.Join("testdata", "critic_output.json"),
+				Name:             "critic",
+				Model:            "gpt-4-turbo",
+				SystemPrompt:     "Provide critique",
+				InputSchemaRef:   "critic_input.json",
+				OutputSchemaRef:  "critic_output.json",
+				InputSchemaPath:  criticInput,
+				OutputSchemaPath: criticOutput,
+				InputSchemaData:  mustRead(t, criticInput),
+				OutputSchemaData: mustRead(t, criticOutput),
 			},
 		},
 		Workflows: map[string]core.IRWorkflow{
@@ -39,6 +48,9 @@ func TestGenerateService(t *testing.T) {
 				},
 			},
 		},
+		TypeRegistry: map[string][]byte{
+			"aiwf://common/Tone": []byte(`{"type":"string","enum":["dark","hopeful","playful"]}`),
+		},
 	}
 
 	files, err := Generate(ir, Options{Package: "generated", OutputDir: "sdk"})
@@ -46,12 +58,12 @@ func TestGenerateService(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 
-    goldens := map[string]string{
-        "sdk/service.go":     "service.golden",
-        "sdk/agents.go":      "agents.golden",
-        "sdk/workflows.go":   "workflows.golden",
-        "sdk/contracts.go":   "contracts.golden",
-    }
+	goldens := map[string]string{
+		"sdk/service.go":   "service.golden",
+		"sdk/agents.go":    "agents.golden",
+		"sdk/workflows.go": "workflows.golden",
+		"sdk/contracts.go": "contracts.golden",
+	}
 
 	for path, goldenName := range goldens {
 		content, ok := files[path]
@@ -74,4 +86,13 @@ func TestGenerateService(t *testing.T) {
 			t.Fatalf("snapshot mismatch for %s:\n%s", goldenName, string(content))
 		}
 	}
+}
+
+func mustRead(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read file %s: %v", path, err)
+	}
+	return data
 }

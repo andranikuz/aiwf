@@ -100,11 +100,13 @@ func buildContext(ir *core.IR, pkg string) struct {
 	Package    string
 	Assistants []assistantCtx
 	Workflows  []workflowCtx
+	Shared     []contractType
 } {
 	ctx := struct {
 		Package    string
 		Assistants []assistantCtx
 		Workflows  []workflowCtx
+		Shared     []contractType
 	}{
 		Package: pkg,
 	}
@@ -113,8 +115,14 @@ func buildContext(ir *core.IR, pkg string) struct {
 	for _, name := range sortedKeys(ir.Assistants) {
 		pascal := pascalCase(name)
 		assistant := ir.Assistants[name]
-		schemaLiteral := loadSchemaLiteral(assistant.OutputSchemaPath)
+		schemaLiteral := loadSchemaLiteral(assistant.OutputSchemaPath, assistant.OutputSchemaData)
 		schemaVar := unexport(pascal) + "OutputSchemaJSON"
+
+		inputContract := loadContract(assistant.InputSchemaPath, assistant.InputSchemaData, pascal+"Input")
+		inputContract.SchemaRef = schemaRefOrDefault(assistant.InputSchemaRef)
+
+		outputContract := loadContract(assistant.OutputSchemaPath, assistant.OutputSchemaData, pascal+"Output")
+		outputContract.SchemaRef = schemaRefOrDefault(assistant.OutputSchemaRef)
 		aCtx := assistantCtx{
 			Name:                name,
 			MethodName:          pascal,
@@ -124,14 +132,24 @@ func buildContext(ir *core.IR, pkg string) struct {
 			SystemPrompt:        assistant.SystemPrompt,
 			InputSchemaRef:      assistant.InputSchemaRef,
 			OutputSchemaRef:     assistant.OutputSchemaRef,
-			InputContract:       loadContract(assistant.InputSchemaPath, pascal+"Input"),
-			OutputContract:      loadContract(assistant.OutputSchemaPath, pascal+"Output"),
+			InputContract:       inputContract,
+			OutputContract:      outputContract,
 			OutputSchemaVar:     schemaVar,
 			OutputSchemaLiteral: schemaLiteral,
 			HasOutputSchema:     schemaLiteral != "",
 		}
 		ctx.Assistants = append(ctx.Assistants, aCtx)
 		assistantMap[name] = aCtx
+	}
+
+	skipContracts := make(map[string]bool)
+	for _, a := range ctx.Assistants {
+		if a.InputContract.Name != "" {
+			skipContracts[a.InputContract.Name] = true
+		}
+		if a.OutputContract.Name != "" {
+			skipContracts[a.OutputContract.Name] = true
+		}
 	}
 
 	for _, name := range sortedKeys(ir.Workflows) {
@@ -191,7 +209,24 @@ func buildContext(ir *core.IR, pkg string) struct {
 		})
 	}
 
+	for _, ref := range sortedKeys(ir.TypeRegistry) {
+		goName := refToGoType(ref)
+		if skipContracts[goName] {
+			continue
+		}
+		contract := loadContract("", ir.TypeRegistry[ref], goName)
+		contract.SchemaRef = ref
+		ctx.Shared = append(ctx.Shared, contract)
+	}
+
 	return ctx
+}
+
+func schemaRefOrDefault(ref string) string {
+	if ref == "" {
+		return "<unspecified>"
+	}
+	return ref
 }
 
 func renderTemplate(name string, ctx any) ([]byte, error) {

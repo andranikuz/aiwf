@@ -4,13 +4,35 @@ package core
 type Spec struct {
 	Version        string                   `yaml:"version"`
 	SchemaRegistry SchemaRegistrySpec       `yaml:"schema_registry"`
+	Imports        []ImportSpec             `yaml:"imports"`
 	Assistants     map[string]AssistantSpec `yaml:"assistants"`
 	Workflows      map[string]WorkflowSpec  `yaml:"workflows"`
+	Resolved       SpecResolution           `yaml:"-"`
 }
 
 // SchemaRegistrySpec описывает расположение JSON Schema.
 type SchemaRegistrySpec struct {
 	Root string `yaml:"root"`
+}
+
+// ImportSpec описывает подключение YAML-файла с типами.
+type ImportSpec struct {
+	As   string `yaml:"as"`
+	Path string `yaml:"path"`
+}
+
+// SpecResolution содержит вспомогательные структуры, полученные при загрузке.
+type SpecResolution struct {
+	TypeRegistry map[string]*SchemaDocument
+}
+
+// SchemaDocument описывает загруженную схему (из JSON или YAML-типов).
+type SchemaDocument struct {
+	ID     string
+	Name   string
+	Source string
+	Alias  string
+	Data   []byte
 }
 
 // AssistantSpec описывает агента в YAML.
@@ -29,6 +51,8 @@ type AssistantSpec struct {
 type AssistantResolution struct {
 	InputSchemaPath  string
 	OutputSchemaPath string
+	InputSchema      *SchemaDocument
+	OutputSchema     *SchemaDocument
 }
 
 // WorkflowSpec описывает workflow.

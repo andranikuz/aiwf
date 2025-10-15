@@ -51,6 +51,55 @@ workflows:
 	}
 }
 
+func TestLoadSpecWithImports(t *testing.T) {
+	dir := t.TempDir()
+	typesPath := filepath.Join(dir, "book.types.yaml")
+	writeFile(t, typesPath, `types:
+  PremiseOutput:
+    $id: "aiwf://book/PremiseOutput"
+    type: object
+    properties:
+      title: { type: string }
+`)
+
+	yamlPath := filepath.Join(dir, "workflow.yaml")
+	writeFile(t, yamlPath, `
+version: 0.2
+imports:
+  - as: book
+    path: ./book.types.yaml
+assistants:
+  premise:
+    model: gpt-4o-mini
+    output_schema_ref: "aiwf://book/PremiseOutput"
+workflows:
+  wf:
+    dag:
+      - step: premise
+        assistant: premise
+`)
+
+	spec, err := LoadSpec(yamlPath)
+	if err != nil {
+		t.Fatalf("LoadSpec: %v", err)
+	}
+
+	assistant := spec.Assistants["premise"]
+	if assistant.Resolved.OutputSchema == nil {
+		t.Fatalf("expected resolved schema")
+	}
+	if assistant.Resolved.OutputSchemaPath != typesPath {
+		t.Fatalf("unexpected schema source: %s", assistant.Resolved.OutputSchemaPath)
+	}
+	if len(assistant.Resolved.OutputSchema.Data) == 0 {
+		t.Fatalf("schema data is empty")
+	}
+
+	if _, ok := spec.Resolved.TypeRegistry["aiwf://book/PremiseOutput"]; !ok {
+		t.Fatalf("type registry missing entry")
+	}
+}
+
 func TestLoadSpecMissingSchema(t *testing.T) {
 	dir := t.TempDir()
 	yamlPath := filepath.Join(dir, "workflow.yaml")

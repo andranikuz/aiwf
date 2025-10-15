@@ -4,21 +4,24 @@ import "fmt"
 
 // IR описывает нормализованный набор ассистентов и воркфлоу.
 type IR struct {
-	Assistants map[string]IRAssistant
-	Workflows  map[string]IRWorkflow
+	Assistants   map[string]IRAssistant
+	Workflows    map[string]IRWorkflow
+	TypeRegistry map[string][]byte
 }
 
 // IRAssistant содержит сведения для генерации SDK.
 type IRAssistant struct {
-    Name             string
-    Model            string
-    SystemPrompt     string
-    Use              string
-    InputSchemaPath  string
-    OutputSchemaPath string
-    DependsOn        []string
-    InputSchemaRef   string
-    OutputSchemaRef  string
+	Name             string
+	Model            string
+	SystemPrompt     string
+	Use              string
+	InputSchemaPath  string
+	OutputSchemaPath string
+	InputSchemaData  []byte
+	OutputSchemaData []byte
+	DependsOn        []string
+	InputSchemaRef   string
+	OutputSchemaRef  string
 }
 
 // IRWorkflow описывает workflow и его шаги.
@@ -44,29 +47,32 @@ func BuildIR(spec *Spec) (*IR, error) {
 	}
 
 	ir := &IR{
-		Assistants: make(map[string]IRAssistant, len(spec.Assistants)),
-		Workflows:  make(map[string]IRWorkflow, len(spec.Workflows)),
+		Assistants:   make(map[string]IRAssistant, len(spec.Assistants)),
+		Workflows:    make(map[string]IRWorkflow, len(spec.Workflows)),
+		TypeRegistry: make(map[string][]byte, len(spec.Resolved.TypeRegistry)),
 	}
 
 	merr := &MultiError{}
 
 	for name, as := range spec.Assistants {
-		if as.Resolved.OutputSchemaPath == "" {
+		if as.Resolved.OutputSchema == nil && as.Resolved.OutputSchemaPath == "" {
 			merr.Append(&ValidationError{Field: fmt.Sprintf("assistants.%s.output_schema_ref", name), Msg: "schema path не вычислен"})
 			continue
 		}
 
-        assistant := IRAssistant{
-            Name:             name,
-            Model:            as.Model,
-            SystemPrompt:     as.SystemPrompt,
-            Use:              as.Use,
-            InputSchemaPath:  as.Resolved.InputSchemaPath,
-            OutputSchemaPath: as.Resolved.OutputSchemaPath,
-            DependsOn:        cloneSlice(as.DependsOn),
-            InputSchemaRef:   as.InputSchemaRef,
-            OutputSchemaRef:  as.OutputSchemaRef,
-        }
+		assistant := IRAssistant{
+			Name:             name,
+			Model:            as.Model,
+			SystemPrompt:     as.SystemPrompt,
+			Use:              as.Use,
+			InputSchemaPath:  as.Resolved.InputSchemaPath,
+			OutputSchemaPath: as.Resolved.OutputSchemaPath,
+			InputSchemaData:  schemaData(as.Resolved.InputSchema),
+			OutputSchemaData: schemaData(as.Resolved.OutputSchema),
+			DependsOn:        cloneSlice(as.DependsOn),
+			InputSchemaRef:   as.InputSchemaRef,
+			OutputSchemaRef:  as.OutputSchemaRef,
+		}
 		ir.Assistants[name] = assistant
 	}
 
@@ -147,6 +153,15 @@ func BuildIR(spec *Spec) (*IR, error) {
 		}
 	}
 
+	for id, doc := range spec.Resolved.TypeRegistry {
+		if doc == nil || len(doc.Data) == 0 {
+			continue
+		}
+		copyData := make([]byte, len(doc.Data))
+		copy(copyData, doc.Data)
+		ir.TypeRegistry[id] = copyData
+	}
+
 	if merr.HasErrors() {
 		return nil, merr
 	}
@@ -164,6 +179,18 @@ func cloneSlice(in []string) []string {
 	}
 	out := make([]string, len(in))
 	copy(out, in)
+	return out
+}
+
+func schemaData(doc *SchemaDocument) []byte {
+	if doc == nil {
+		return nil
+	}
+	if len(doc.Data) == 0 {
+		return nil
+	}
+	out := make([]byte, len(doc.Data))
+	copy(out, doc.Data)
 	return out
 }
 

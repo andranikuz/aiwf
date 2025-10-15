@@ -1,0 +1,35 @@
+types:
+  PremiseOutput:
+    $id: "aiwf://book/PremiseOutput"
+    type: object
+    required: [logline, themes, tone]
+    properties:
+      logline: { type: string, minLength: 10 }
+      themes:
+        type: array
+        items: { type: string }
+        minItems: 2
+      tone: { $ref: "aiwf://common/Tone" }
+
+  OutlineInput:
+    $id: "aiwf://book/OutlineInput"
+    type: object
+    required: [premise]
+    properties:
+      premise:
+        $ref: "aiwf://book/PremiseOutput"
+
+  OutlineOutput:
+    $id: "aiwf://book/OutlineOutput"
+    type: object
+    required: [chapters]
+    properties:
+      chapters:
+        type: array
+        items:
+          $id: "aiwf://book/Chapter"
+          type: object
+          required: [id, title]
+          properties:
+            id:    { type: string }
+            title: { type: string }

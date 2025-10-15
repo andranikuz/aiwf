@@ -31,8 +31,10 @@ func Generate(ir *core.IR, opts Options) (map[string][]byte, error) {
 	outputs := map[string]string{
 		"templates/service.go.tmpl":   filepath.Join(opts.OutputDir, "service.go"),
 		"templates/agents.go.tmpl":    filepath.Join(opts.OutputDir, "agents.go"),
-		"templates/workflows.go.tmpl": filepath.Join(opts.OutputDir, "workflows.go"),
 		"templates/contracts.go.tmpl": filepath.Join(opts.OutputDir, "contracts.go"),
+	}
+	if ctx.HasWorkflows {
+		outputs["templates/workflows.go.tmpl"] = filepath.Join(opts.OutputDir, "workflows.go")
 	}
 
 	files := make(map[string][]byte, len(outputs))
@@ -97,18 +99,21 @@ func sortedKeys[T any](m map[string]T) []string {
 }
 
 func buildContext(ir *core.IR, pkg string) struct {
-	Package    string
-	Assistants []assistantCtx
-	Workflows  []workflowCtx
-	Shared     []contractType
+	Package      string
+	Assistants   []assistantCtx
+	Workflows    []workflowCtx
+	Shared       []contractType
+	HasWorkflows bool
 } {
 	ctx := struct {
-		Package    string
-		Assistants []assistantCtx
-		Workflows  []workflowCtx
-		Shared     []contractType
+		Package      string
+		Assistants   []assistantCtx
+		Workflows    []workflowCtx
+		Shared       []contractType
+		HasWorkflows bool
 	}{
-		Package: pkg,
+		Package:      pkg,
+		HasWorkflows: len(ir.Workflows) > 0,
 	}
 
 	assistantMap := make(map[string]assistantCtx)

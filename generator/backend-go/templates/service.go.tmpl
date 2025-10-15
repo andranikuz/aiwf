@@ -8,7 +8,9 @@ import (
 
 type Service interface {
     Agents() Agents
+{{- if .HasWorkflows }}
     Workflows() Workflows
+{{- end }}
 }
 
 type service struct {
@@ -20,7 +22,9 @@ func NewService(client aiwf.ModelClient) Service {
 }
 
 func (s *service) Agents() Agents { return &agents{client: s.client} }
+{{- if .HasWorkflows }}
 func (s *service) Workflows() Workflows { return &workflows{client: s.client} }
+{{- end }}
 
 func mergeTrace(base, next *aiwf.Trace) *aiwf.Trace {
     if base == nil {

@@ -88,6 +88,36 @@ func TestGenerateService(t *testing.T) {
 	}
 }
 
+func TestGenerateWithoutWorkflows(t *testing.T) {
+	writerOutput := filepath.Join("testdata", "writer_output.json")
+
+	ir := &core.IR{
+		Assistants: map[string]core.IRAssistant{
+			"writer": {
+				Name:             "writer",
+				Model:            "gpt-4",
+				OutputSchemaRef:  "writer_output.json",
+				OutputSchemaPath: writerOutput,
+				OutputSchemaData: mustRead(t, writerOutput),
+			},
+		},
+		Workflows: map[string]core.IRWorkflow{},
+	}
+
+	files, err := Generate(ir, Options{Package: "generated", OutputDir: "sdk"})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	if _, ok := files[filepath.Join("sdk", "workflows.go")]; ok {
+		t.Fatalf("workflows.go should not be generated when workflows are absent")
+	}
+
+	if _, ok := files[filepath.Join("sdk", "service.go")]; !ok {
+		t.Fatalf("service.go not generated")
+	}
+}
+
 func mustRead(t *testing.T, path string) []byte {
 	t.Helper()
 	data, err := os.ReadFile(path)

@@ -44,8 +44,8 @@ func validateSpec(p string, spec *Spec) error {
 	if len(spec.Assistants) == 0 {
 		return &ValidationError{Field: "assistants", Msg: "не найдены"}
 	}
-	if len(spec.Workflows) == 0 {
-		return &ValidationError{Field: "workflows", Msg: "не найдены"}
+	if spec.Workflows == nil {
+		spec.Workflows = make(map[string]WorkflowSpec)
 	}
 	if spec.SchemaRegistry.Root == "" && len(spec.Imports) == 0 {
 		return &ValidationError{Field: "schema_registry.root", Msg: "должен быть заполнен или используйте imports"}

@@ -9,8 +9,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/andranikuz/aiwf/runtime/go/aiwf"
 )
@@ -271,7 +273,7 @@ func buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
 		return textSection{}, errors.New("openai: output schema is required")
 	}
 
-	name := firstNonEmpty(call.OutputSchemaRef, "aiwf_output")
+	name := schemaFormatName(call.OutputSchemaRef)
 
 	return textSection{
 		Format: textFormat{
@@ -282,11 +284,44 @@ func buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
 	}, nil
 }
 
-func firstNonEmpty(value, fallback string) string {
-	if strings.TrimSpace(value) == "" {
-		return fallback
+func schemaFormatName(ref string) string {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return "aiwf_output"
 	}
-	return strings.Replace(value, ".", "_", 1)
+
+	candidate := ref
+	if strings.Contains(candidate, "://") {
+		if idx := strings.LastIndex(candidate, "/"); idx >= 0 && idx < len(candidate)-1 {
+			candidate = candidate[idx+1:]
+		}
+	} else if strings.Contains(candidate, "/") {
+		candidate = filepath.Base(candidate)
+	}
+
+	candidate = strings.TrimSuffix(candidate, filepath.Ext(candidate))
+	if candidate == "" {
+		candidate = "aiwf_output"
+	}
+
+	sanitized := make([]rune, 0, len(candidate))
+	for _, r := range candidate {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			sanitized = append(sanitized, r)
+			continue
+		}
+		if r == '_' || r == '-' {
+			sanitized = append(sanitized, r)
+			continue
+		}
+		sanitized = append(sanitized, '_')
+	}
+
+	name := strings.TrimLeftFunc(string(sanitized), func(r rune) bool { return r == '_' || r == '-' })
+	if name == "" {
+		name = "aiwf_output"
+	}
+	return name
 }
 
 func extractStructuredText(messages []responseMessage) (string, error) {

@@ -1,34 +1,51 @@
 # Рантайм AIWF
 
-`runtime/` содержит контракты и сторы, необходимые для запуска сгенерированных воркфлоу.
+`runtime/` содержит контракты и утилиты, необходимые для исполнения сгенерированных воркфлоу.
 
-## Пакеты
+## Основные пакеты
 
-- `go/aiwf` — базовые интерфейсы и типы:
-  - `ModelClient` — абстракция над LLM (методы `CallJSONSchema`, `CallJSONSchemaStream`).
-  - `Workflow`, `Trace`, `Tokens` — единый контракт для SDK.
-  - `ArtifactStore` — хранение промежуточных артефактов (промпты, JSON).
-- `go/aiwf/store` — реализации `ArtifactStore`:
-  - `filesystem` — локальное хранение с TTL и очисткой;
-  - `s3` — сохранение артефактов в S3;
-  - вспомогательный `hashutil`.
+- `runtime/go/aiwf`
+  - `ModelClient` — интерфейс LLM-клиента (`CallJSONSchema`, `CallJSONSchemaStream`).
+  - `ThreadState`, `ThreadBinding`, `ThreadManager` — новая подсистема для управления диалоговыми тредами.
+  - `DialogAction`, `DialogDecider`, `DefaultDialogDecider`, `NoopThreadManager` — механика диалогов.
+  - `Workflow` — базовый интерфейс для раннеров (сгенерированный SDK его реализует).
+  - `Tokens`, `Trace`, `ArtifactStore` — контракты наблюдаемости и артефактов.
+- `runtime/go/aiwf/store` — реализации `ArtifactStore` (filesystem, s3).
 
-## Как использовать
+## Диалоговые воркфлоу
 
-1. Реализуйте `ModelClient`, который конвертирует `aiwf.ModelCall` в запрос к провайдеру.
-2. Создайте `aiwf.ArtifactStore` (например, `store.NewFilesystemStore`).
-3. Передайте клиент в сгенерированный SDK: `sdk.NewService(modelClient)`.
-4. Запускайте воркфлоу `service.Workflows().<Name>().Run(ctx, input)`.
+- `ThreadManager` управляет `ThreadState` между вызовами агента (создание/продолжение/закрытие).
+- `DialogDecider` решает, повторять ли шаг (`DialogActionRetry`), переходить к другому (`DialogActionGoto`), завершать.
+- По умолчанию используется `NoopThreadManager` и `DefaultDialogDecider`, работающие как single-shot.
 
-## Пример
+## Реализация провайдеров
 
-См. `examples/blog/example_usage.go` — минимальный `ModelClient`, который имитирует ответы и печатает результат воркфлоу.
+- Провайдеры должны поддерживать `ThreadState` (например, OpenAI Responses API использует `thread_id`).
+- При `DialogActionRetry` генератор вызывает `ThreadManager.Continue` с текстом feedback.
 
-## Тесты
+## Пример использования
+
+Сгенерированный SDK (например, `examples/blog/sdk`) вызывает агента примерно так:
+
+```go
+state, _ := threadManager.Start(ctx, "premise", aiwf.ThreadBinding{Name: "default", Provider: "openai_responses"})
+output, state, trace, err := service.Agents().Premise().Run(ctx, input, state)
+```
+
+Пользователь может передать свой менеджер тредов:
+
+```go
+svc := blog.NewService(client).
+    WithThreadManager(myThreads).
+    WithDialogDecider(myDecider).
+    WithMaxDialogRounds(3)
+```
+
+## Тестирование
 
 ```bash
+unset GOROOT && export GOTOOLCHAIN=local
 go test ./runtime/...
 ```
 
-Для хранилища S3 нужны переменные окружения `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, либо используйте `-run TestS3` с `testing.Short()` во время разработки.
-
+`runtime/go/aiwf/dialog.go` и `runtime/go/aiwf/contracts.go` — отправные точки для расширения собственного рантайма.

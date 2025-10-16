@@ -8,23 +8,55 @@ import (
 
 type Service interface {
     Agents() Agents
-{{- if .HasWorkflows }}
     Workflows() Workflows
-{{- end }}
+    WithThreadManager(tm aiwf.ThreadManager) Service
+    WithDialogDecider(decider aiwf.DialogDecider) Service
+    WithMaxDialogRounds(n int) Service
 }
 
 type service struct {
-    client aiwf.ModelClient
+    client          aiwf.ModelClient
+    threadManager   aiwf.ThreadManager
+    dialogDecider   aiwf.DialogDecider
+    maxDialogRounds int
 }
 
 func NewService(client aiwf.ModelClient) Service {
-    return &service{client: client}
+    return &service{client: client, maxDialogRounds: 1, dialogDecider: aiwf.DefaultDialogDecider{}}
+}
+
+func (s *service) WithThreadManager(tm aiwf.ThreadManager) Service {
+    copy := *s
+    copy.threadManager = tm
+    return &copy
+}
+
+func (s *service) WithDialogDecider(decider aiwf.DialogDecider) Service {
+    copy := *s
+    if decider != nil {
+        copy.dialogDecider = decider
+    }
+    return &copy
+}
+
+func (s *service) WithMaxDialogRounds(n int) Service {
+    copy := *s
+    if n > 0 {
+        copy.maxDialogRounds = n
+    }
+    return &copy
 }
 
 func (s *service) Agents() Agents { return &agents{client: s.client} }
-{{- if .HasWorkflows }}
-func (s *service) Workflows() Workflows { return &workflows{client: s.client} }
-{{- end }}
+
+func (s *service) Workflows() Workflows {
+    return &workflows{
+        client:          s.client,
+        threads:         s.threadManager,
+        dialogDecider:   s.dialogDecider,
+        maxDialogRounds: s.maxDialogRounds,
+    }
+}
 
 func mergeTrace(base, next *aiwf.Trace) *aiwf.Trace {
     if base == nil {
@@ -33,7 +65,6 @@ func mergeTrace(base, next *aiwf.Trace) *aiwf.Trace {
     if next == nil {
         return base
     }
-    // TODO: объединить usage/attempts, пока возвращаем последний trace.
     return next
 }
 

@@ -12,50 +12,191 @@ type Workflows interface {
 }
 
 type workflows struct {
-    client aiwf.ModelClient
+    client          aiwf.ModelClient
+    threads         aiwf.ThreadManager
+    dialogDecider   aiwf.DialogDecider
+    maxDialogRounds int
 }
-func (w *workflows) Novel() NovelWorkflow { return &novelWorkflow{client: w.client} }
+func (w *workflows) Novel() NovelWorkflow {
+    return &novelWorkflow{
+        client:          w.client,
+        threads:         w.threads,
+        dialogDecider:   w.dialogDecider,
+        maxDialogRounds: w.maxDialogRounds,
+    }
+}
 
 type NovelWorkflow interface {
-    Run(ctx context.Context, input NovelInput) (NovelOutput, *aiwf.Trace, error)
+    Run(ctx context.Context, input WriterInput, opts ...RunOption) (CriticOutput, *aiwf.Trace, error)
 }
 
 type novelWorkflow struct {
-    client aiwf.ModelClient
+    client          aiwf.ModelClient
+    threads         aiwf.ThreadManager
+    dialogDecider   aiwf.DialogDecider
+    maxDialogRounds int
 }
 
-func (r *novelWorkflow) Run(ctx context.Context, input NovelInput) (NovelOutput, *aiwf.Trace, error) {
+func (r *novelWorkflow) Run(ctx context.Context, input WriterInput, opts ...RunOption) (CriticOutput, *aiwf.Trace, error) {
+    settings := applyRunOptions(r.threads, r.dialogDecider, r.maxDialogRounds, opts)
+
     agents := &agents{client: r.client}
-    result := NovelOutput{}
+    result := CriticOutput{}
     traces := make([]*aiwf.Trace, 0, 2)
     prev := map[string]any{"input": input}
     {
-        stepInput := WriterInput{}
-        if candidate, ok := prev["input"].(WriterInput); ok {
-            stepInput = candidate
+        var threadState *aiwf.ThreadState
+        
+
+        stepMax := perStepMaxRounds(settings, 0)
+        if stepMax <= 0 {
+            stepMax = 1
         }
 
-        output, trace, err := agents.Writer().Run(ctx, stepInput)
-        if err != nil {
-            return result, mergeTraces(traces...), fmt.Errorf("step draft failed: %w", err)
+        completed := false
+        for attempt := 1; attempt <= stepMax; attempt++ {
+            stepInput := WriterInput{}
+            if candidate, ok := prev["input"].(WriterInput); ok {
+                stepInput = candidate
+            }
+
+            output, state, trace, err := agents.Writer().Run(ctx, stepInput, threadState)
+            threadState = state
+            if err != nil {
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), fmt.Errorf("step draft failed: %w", err)
+            }
+
+            prev["draft"] = output
+            traces = append(traces, trace)
+
+            decision := settings.DialogDecider.Decide(aiwf.DialogContext{
+                Step:    "draft",
+                Output:  output,
+                Trace:   trace,
+                Attempt: attempt,
+            })
+
+            switch decision.Action {
+            case aiwf.DialogActionRetry:
+                if settings.ThreadManager != nil && threadState != nil {
+                    if err := settings.ThreadManager.Continue(ctx, threadState, decision.Feedback); err != nil {
+                        _ = settings.ThreadManager.Close(ctx, threadState)
+                        return result, mergeTraces(traces...), err
+                    }
+                }
+                continue
+            case aiwf.DialogActionGoto:
+                prev[decision.Target] = output
+                completed = true
+            case aiwf.DialogActionStop:
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), nil
+            case aiwf.DialogActionContinue, aiwf.DialogActionComplete:
+                if false {
+                    result = mergeWorkflowOutput(result, CriticOutput(output))
+                }
+                completed = true
+            default:
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), fmt.Errorf("step draft: unsupported dialog action %d", decision.Action)
+            }
+
+            if settings.ThreadManager != nil && threadState != nil {
+                _ = settings.ThreadManager.Close(ctx, threadState)
+            }
+            break
         }
-        prev["draft"] = output
-        traces = append(traces, trace)
+        if !completed {
+            if settings.ThreadManager != nil && threadState != nil {
+                _ = settings.ThreadManager.Close(ctx, threadState)
+            }
+            return result, mergeTraces(traces...), fmt.Errorf("step draft exceeded dialog rounds")
+        }
     }
     {
-        stepInput := CriticInput{}
-        if candidate, ok := prev["draft"].(CriticInput); ok {
-            stepInput = candidate
+        var threadState *aiwf.ThreadState
+        
+
+        stepMax := perStepMaxRounds(settings, 0)
+        if stepMax <= 0 {
+            stepMax = 1
         }
 
-        output, trace, err := agents.Critic().Run(ctx, stepInput)
-        if err != nil {
-            return result, mergeTraces(traces...), fmt.Errorf("step critique failed: %w", err)
+        completed := false
+        for attempt := 1; attempt <= stepMax; attempt++ {
+            stepInput := CriticInput{}
+            if candidate, ok := prev["draft"].(CriticInput); ok {
+                stepInput = candidate
+            }
+
+            output, state, trace, err := agents.Critic().Run(ctx, stepInput, threadState)
+            threadState = state
+            if err != nil {
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), fmt.Errorf("step critique failed: %w", err)
+            }
+
+            prev["critique"] = output
+            traces = append(traces, trace)
+
+            decision := settings.DialogDecider.Decide(aiwf.DialogContext{
+                Step:    "critique",
+                Output:  output,
+                Trace:   trace,
+                Attempt: attempt,
+            })
+
+            switch decision.Action {
+            case aiwf.DialogActionRetry:
+                if settings.ThreadManager != nil && threadState != nil {
+                    if err := settings.ThreadManager.Continue(ctx, threadState, decision.Feedback); err != nil {
+                        _ = settings.ThreadManager.Close(ctx, threadState)
+                        return result, mergeTraces(traces...), err
+                    }
+                }
+                continue
+            case aiwf.DialogActionGoto:
+                prev[decision.Target] = output
+                completed = true
+            case aiwf.DialogActionStop:
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), nil
+            case aiwf.DialogActionContinue, aiwf.DialogActionComplete:
+                if true {
+                    result = mergeWorkflowOutput(result, CriticOutput(output))
+                }
+                completed = true
+            default:
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), fmt.Errorf("step critique: unsupported dialog action %d", decision.Action)
+            }
+
+            if settings.ThreadManager != nil && threadState != nil {
+                _ = settings.ThreadManager.Close(ctx, threadState)
+            }
+            break
         }
-        prev["critique"] = output
-        traces = append(traces, trace)
-        result = mergeWorkflowOutput(result, NovelOutput(output))
+        if !completed {
+            if settings.ThreadManager != nil && threadState != nil {
+                _ = settings.ThreadManager.Close(ctx, threadState)
+            }
+            return result, mergeTraces(traces...), fmt.Errorf("step critique exceeded dialog rounds")
+        }
     }
-
     return result, mergeTraces(traces...), nil
 }
+
+

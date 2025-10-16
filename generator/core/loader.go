@@ -29,6 +29,14 @@ func LoadSpec(path string) (*Spec, error) {
 		return nil, err
 	}
 
+	if err := normalizeThreads(spec); err != nil {
+		return nil, err
+	}
+
+	if err := validateThreadBindings(spec); err != nil {
+		return nil, err
+	}
+
 	if err := resolveAssistantSchemas(path, spec); err != nil {
 		return nil, err
 	}
@@ -108,6 +116,90 @@ func resolveAssistantSchemas(specPath string, spec *Spec) error {
 		return merr
 	}
 
+	return nil
+}
+
+func normalizeThreads(spec *Spec) error {
+	if spec.Threads == nil {
+		spec.Threads = make(map[string]ThreadSpec)
+		return nil
+	}
+
+	validStrategies := map[string]bool{
+		"append":             true,
+		"reset_before_step": true,
+	}
+
+	for name, thread := range spec.Threads {
+		trimmedName := strings.TrimSpace(name)
+		if trimmedName == "" {
+			return &ValidationError{Field: "threads", Msg: "имя политики не может быть пустым"}
+		}
+		if thread.Provider == "" {
+			return &ValidationError{Field: fmt.Sprintf("threads.%s.provider", name), Msg: "должен быть заполнен"}
+		}
+		if thread.Strategy == "" {
+			thread.Strategy = "append"
+		}
+		if !validStrategies[thread.Strategy] {
+			return &ValidationError{Field: fmt.Sprintf("threads.%s.strategy", name), Msg: "неподдерживаемое значение"}
+		}
+		if thread.TTLHours < 0 {
+			return &ValidationError{Field: fmt.Sprintf("threads.%s.ttl_hours", name), Msg: "не может быть отрицательным"}
+		}
+		spec.Threads[name] = thread
+	}
+	return nil
+}
+
+func validateThreadBindings(spec *Spec) error {
+	for name, as := range spec.Assistants {
+		if as.Thread != nil {
+			if err := ensureThreadBinding(spec, fmt.Sprintf("assistants.%s.thread", name), as.Thread); err != nil {
+				return err
+			}
+		}
+		if as.Dialog != nil && as.Dialog.MaxRounds < 0 {
+			return &ValidationError{Field: fmt.Sprintf("assistants.%s.dialog.max_rounds", name), Msg: "не может быть отрицательным"}
+		}
+	}
+
+	for wfName, wf := range spec.Workflows {
+		if wf.Thread != nil {
+			if err := ensureThreadBinding(spec, fmt.Sprintf("workflows.%s.thread", wfName), wf.Thread); err != nil {
+				return err
+			}
+		}
+		for idx, step := range wf.DAG {
+			if step.Thread != nil {
+				if err := ensureThreadBinding(spec, fmt.Sprintf("workflows.%s.dag[%d].thread", wfName, idx), step.Thread); err != nil {
+					return err
+				}
+			}
+			if step.Dialog != nil && step.Dialog.MaxRounds < 0 {
+				return &ValidationError{Field: fmt.Sprintf("workflows.%s.dag[%d].dialog.max_rounds", wfName, idx), Msg: "не может быть отрицательным"}
+			}
+		}
+	}
+	return nil
+}
+
+func ensureThreadBinding(spec *Spec, field string, binding *ThreadBindingSpec) error {
+	if binding == nil {
+		return nil
+	}
+	if binding.Use != "" {
+		if _, ok := spec.Threads[binding.Use]; !ok {
+			return &ValidationError{Field: field + ".use", Msg: "политика не найдена"}
+		}
+	}
+	if binding.Strategy != "" {
+		switch binding.Strategy {
+		case "append", "reset_before_step":
+		default:
+			return &ValidationError{Field: field + ".strategy", Msg: "неподдерживаемое значение"}
+		}
+	}
 	return nil
 }
 

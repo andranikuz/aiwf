@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 	"text/template"
 	"unicode"
 
@@ -35,6 +36,7 @@ func Generate(ir *core.IR, opts Options) (map[string][]byte, error) {
 	}
 	if ctx.HasWorkflows {
 		outputs["templates/workflows.go.tmpl"] = filepath.Join(opts.OutputDir, "workflows.go")
+		outputs["templates/dialog.go.tmpl"] = filepath.Join(opts.OutputDir, "dialog.go")
 	}
 
 	files := make(map[string][]byte, len(outputs))
@@ -64,6 +66,8 @@ type assistantCtx struct {
 	OutputSchemaVar     string
 	OutputSchemaLiteral string
 	HasOutputSchema     bool
+	Thread              *core.ThreadBindingSpec
+	Dialog              *core.DialogSpec
 }
 
 type workflowCtx struct {
@@ -77,16 +81,27 @@ type workflowCtx struct {
 }
 
 type workflowStepCtx struct {
-	Name           string
-	Method         string
-	InputType      string
-	OutputType     string
-	ResultVar      string
-	TraceVar       string
-	Needs          []string
-	IsLast         bool
-	InputSource    string
-	AssignToResult bool
+	Name            string
+	Method          string
+	InputType       string
+	OutputType      string
+	ResultVar       string
+	TraceVar        string
+	Needs           []string
+	IsLast          bool
+	InputSource     string
+	AssignToResult  bool
+	Thread          *threadBindingInfo
+	MaxDialogRounds int
+	Approval        *core.ApprovalSpec
+	Next            *core.NextStepSpec
+}
+
+type threadBindingInfo struct {
+	Name            string
+	Provider        string
+	Strategy        string
+	MetadataLiteral string
 }
 
 func sortedKeys[T any](m map[string]T) []string {
@@ -103,6 +118,7 @@ func buildContext(ir *core.IR, pkg string) struct {
 	Assistants   []assistantCtx
 	Workflows    []workflowCtx
 	Shared       []contractType
+	Threads      map[string]core.ThreadSpec
 	HasWorkflows bool
 } {
 	ctx := struct {
@@ -110,13 +126,19 @@ func buildContext(ir *core.IR, pkg string) struct {
 		Assistants   []assistantCtx
 		Workflows    []workflowCtx
 		Shared       []contractType
+		Threads      map[string]core.ThreadSpec
 		HasWorkflows bool
 	}{
 		Package:      pkg,
 		HasWorkflows: len(ir.Workflows) > 0,
+		Threads:      make(map[string]core.ThreadSpec, len(ir.Threads)),
 	}
 
 	assistantMap := make(map[string]assistantCtx)
+	assistantDefaults := make(map[string]struct {
+		Thread *core.ThreadBindingSpec
+		Dialog *core.DialogSpec
+	})
 	for _, name := range sortedKeys(ir.Assistants) {
 		pascal := pascalCase(name)
 		assistant := ir.Assistants[name]
@@ -142,9 +164,15 @@ func buildContext(ir *core.IR, pkg string) struct {
 			OutputSchemaVar:     schemaVar,
 			OutputSchemaLiteral: schemaLiteral,
 			HasOutputSchema:     schemaLiteral != "",
+			Thread:              assistant.Thread,
+			Dialog:              assistant.Dialog,
 		}
 		ctx.Assistants = append(ctx.Assistants, aCtx)
 		assistantMap[name] = aCtx
+		assistantDefaults[name] = struct {
+			Thread *core.ThreadBindingSpec
+			Dialog *core.DialogSpec
+		}{Thread: assistant.Thread, Dialog: assistant.Dialog}
 	}
 
 	skipContracts := make(map[string]bool)
@@ -190,17 +218,25 @@ func buildContext(ir *core.IR, pkg string) struct {
 
 			assignResult := isLast && method != ""
 
+			defaults := assistantDefaults[step.Assistant]
+			binding := resolveThreadBinding(ir.Threads, defaults.Thread, wf.Thread, step.Thread)
+			maxRounds := resolveMaxDialogRounds(defaults.Dialog, step.Dialog)
+
 			steps = append(steps, workflowStepCtx{
-				Name:           step.Name,
-				Method:         method,
-				InputType:      inputType,
-				OutputType:     outputType,
-				ResultVar:      varName,
-				TraceVar:       traceVar,
-				Needs:          step.Needs,
-				IsLast:         isLast,
-				InputSource:    src,
-				AssignToResult: assignResult,
+				Name:            step.Name,
+				Method:          method,
+				InputType:       inputType,
+				OutputType:      outputType,
+				ResultVar:       varName,
+				TraceVar:        traceVar,
+				Needs:           step.Needs,
+				IsLast:          isLast,
+				InputSource:     src,
+				AssignToResult:  assignResult,
+				Thread:          binding,
+				MaxDialogRounds: maxRounds,
+				Approval:        step.Approval,
+				Next:            step.Next,
 			})
 		}
 		ctx.Workflows = append(ctx.Workflows, workflowCtx{
@@ -224,6 +260,10 @@ func buildContext(ir *core.IR, pkg string) struct {
 		ctx.Shared = append(ctx.Shared, contract)
 	}
 
+	for name, thread := range ir.Threads {
+		ctx.Threads[name] = thread
+	}
+
 	return ctx
 }
 
@@ -232,6 +272,88 @@ func schemaRefOrDefault(ref string) string {
 		return "<unspecified>"
 	}
 	return ref
+}
+
+func resolveThreadBinding(threads map[string]core.ThreadSpec, assistant, workflow, step *core.ThreadBindingSpec) *threadBindingInfo {
+	binding := firstNonNil(step, workflow, assistant)
+	if binding == nil {
+		return nil
+	}
+	if binding.Use == "" {
+		return nil
+	}
+	spec, ok := threads[binding.Use]
+	if !ok {
+		return nil
+	}
+	strategy := binding.Strategy
+	if strategy == "" {
+		strategy = spec.Strategy
+	}
+	info := &threadBindingInfo{
+		Name:            binding.Use,
+		Provider:        spec.Provider,
+		Strategy:        strategy,
+		MetadataLiteral: goLiteral(spec.Metadata),
+	}
+	return info
+}
+
+func resolveMaxDialogRounds(assistant, step *core.DialogSpec) int {
+	if step != nil && step.MaxRounds > 0 {
+		return step.MaxRounds
+	}
+	if assistant != nil && assistant.MaxRounds > 0 {
+		return assistant.MaxRounds
+	}
+	return 0
+}
+
+func firstNonNil(values ...*core.ThreadBindingSpec) *core.ThreadBindingSpec {
+	for _, v := range values {
+		if v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+func goLiteral(value any) string {
+	switch v := value.(type) {
+	case nil:
+		return "nil"
+	case string:
+		return fmt.Sprintf("%q", v)
+	case float64, int, int64, float32:
+		return fmt.Sprintf("%v", v)
+	case bool:
+		return fmt.Sprintf("%t", v)
+	case map[string]any:
+		parts := make([]string, 0, len(v))
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			parts = append(parts, fmt.Sprintf("%q: %s", k, goLiteral(v[k])))
+		}
+		if len(parts) == 0 {
+			return "nil"
+		}
+		return fmt.Sprintf("map[string]any{%s}", strings.Join(parts, ", "))
+	case []any:
+		if len(v) == 0 {
+			return "nil"
+		}
+		elems := make([]string, 0, len(v))
+		for _, item := range v {
+			elems = append(elems, goLiteral(item))
+		}
+		return fmt.Sprintf("[]any{%s}", strings.Join(elems, ", "))
+	default:
+		return fmt.Sprintf("%q", fmt.Sprintf("%v", v))
+	}
 }
 
 func renderTemplate(name string, ctx any) ([]byte, error) {

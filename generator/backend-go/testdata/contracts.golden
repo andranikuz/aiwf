@@ -1,39 +1,47 @@
 package generated
 
+// Tone соответствует схеме aiwf://common/Tone.
 type Tone = string
-
 const (
     ToneDark Tone = "dark"
     ToneHopeful Tone = "hopeful"
     TonePlayful Tone = "playful"
 )
 
+
+// CriticInput соответствует схеме critic_input.json.
 type CriticInput struct {
     Draft string `json:"draft"`
 }
 
+// CriticOutput соответствует схеме critic_output.json.
 type CriticOutput struct {
     Notes string `json:"notes"`
     Score float64 `json:"score"`
 }
 
+
+// WriterInput соответствует схеме writer_input.json.
 type WriterInput struct {
     MaxTokens int `json:"maxTokens"`
     Prompt string `json:"prompt"`
 }
 
+// WriterOutput соответствует схеме writer_output.json.
 type WriterOutput struct {
     Chapters []WriterOutputChaptersItem `json:"chapters"`
     Draft string `json:"draft"`
     Duration float64 `json:"duration"`
     Tone Tone `json:"tone"`
 }
-
 type WriterOutputChaptersItem struct {
-    ID string `json:"id"`
+    Id string `json:"id"`
     Title string `json:"title"`
 }
 
+// NovelInput описывает вход workflow.
 type NovelInput = WriterInput
 
+// NovelOutput описывает выход workflow.
 type NovelOutput = CriticOutput
+

@@ -14,50 +14,134 @@ type Workflows interface {
 }
 
 type workflows struct {
-    client aiwf.ModelClient
+    client          aiwf.ModelClient
+    threads         aiwf.ThreadManager
+    dialogDecider   aiwf.DialogDecider
+    maxDialogRounds int
 }
 
-{{- range .Workflows }}
-func (w *workflows) {{ .MethodName }}() {{ .RunnerName }} { return &{{ .StructName }}{client: w.client} }
+{{- range .Workflows }}{{ $wf := . }}
+func (w *workflows) {{ .MethodName }}() {{ .RunnerName }} {
+    return &{{ .StructName }}{
+        client:          w.client,
+        threads:         w.threads,
+        dialogDecider:   w.dialogDecider,
+        maxDialogRounds: w.maxDialogRounds,
+    }
+}
 
 type {{ .RunnerName }} interface {
-    Run(ctx context.Context, input {{ .MethodName }}Input) ({{ .MethodName }}Output, *aiwf.Trace, error)
+    Run(ctx context.Context, input {{ .InputType }}, opts ...RunOption) ({{ .OutputType }}, *aiwf.Trace, error)
 }
 
 type {{ .StructName }} struct {
-    client aiwf.ModelClient
+    client          aiwf.ModelClient
+    threads         aiwf.ThreadManager
+    dialogDecider   aiwf.DialogDecider
+    maxDialogRounds int
 }
 
-func (r *{{ .StructName }}) Run(ctx context.Context, input {{ .MethodName }}Input) ({{ .MethodName }}Output, *aiwf.Trace, error) {
+func (r *{{ .StructName }}) Run(ctx context.Context, input {{ .InputType }}, opts ...RunOption) ({{ .OutputType }}, *aiwf.Trace, error) {
+    settings := applyRunOptions(r.threads, r.dialogDecider, r.maxDialogRounds, opts)
+
     agents := &agents{client: r.client}
-    result := {{ .MethodName }}Output{}
+    result := {{ .OutputType }}{}
     traces := make([]*aiwf.Trace, 0, {{ len .Steps }})
     prev := map[string]any{"input": input}
 
-{{- $wf := . }}
-{{- range $wf.Steps }}
-    {{- if .Method }}
+{{- range .Steps }}
     {
-        stepInput := {{ .InputType }}{}
-        if candidate, ok := prev[{{ .InputSource }}].({{ .InputType }}); ok {
-            stepInput = candidate
+        var threadState *aiwf.ThreadState
+        {{ if .Thread }}
+        stepBinding := aiwf.ThreadBinding{
+            Name:     {{ printf "%q" .Thread.Name }},
+            Provider: {{ printf "%q" .Thread.Provider }},
+            Strategy: {{ printf "%q" .Thread.Strategy }},
+            Metadata: {{ if .Thread.MetadataLiteral }}{{ .Thread.MetadataLiteral }}{{ else }}nil{{ end }},
+        }
+        if settings.ThreadManager != nil && stepBinding.Name != "" {
+            state, err := settings.ThreadManager.Start(ctx, {{ printf "%q" .Method }}, stepBinding)
+            if err != nil {
+                return result, mergeTraces(traces...), err
+            }
+            threadState = state
+        }
+        {{ end }}
+
+        stepMax := perStepMaxRounds(settings, {{ .MaxDialogRounds }})
+        if stepMax <= 0 {
+            stepMax = 1
         }
 
-        output, trace, err := agents.{{ .Method }}().Run(ctx, stepInput)
-        if err != nil {
-            return result, mergeTraces(traces...), fmt.Errorf("step {{ .Name }} failed: %w", err)
+        completed := false
+        for attempt := 1; attempt <= stepMax; attempt++ {
+            stepInput := {{ .InputType }}{}
+            if candidate, ok := prev[{{ .InputSource }}].({{ .InputType }}); ok {
+                stepInput = candidate
+            }
+
+            output, state, trace, err := agents.{{ .Method }}().Run(ctx, stepInput, threadState)
+            threadState = state
+            if err != nil {
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), fmt.Errorf("step {{ .Name }} failed: %w", err)
+            }
+
+            prev[{{ printf "%q" .Name }}] = output
+            traces = append(traces, trace)
+
+            decision := settings.DialogDecider.Decide(aiwf.DialogContext{
+                Step:    {{ printf "%q" .Name }},
+                Output:  output,
+                Trace:   trace,
+                Attempt: attempt,
+            })
+
+            switch decision.Action {
+            case aiwf.DialogActionRetry:
+                if settings.ThreadManager != nil && threadState != nil {
+                    if err := settings.ThreadManager.Continue(ctx, threadState, decision.Feedback); err != nil {
+                        _ = settings.ThreadManager.Close(ctx, threadState)
+                        return result, mergeTraces(traces...), err
+                    }
+                }
+                continue
+            case aiwf.DialogActionGoto:
+                prev[decision.Target] = output
+                completed = true
+            case aiwf.DialogActionStop:
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), nil
+            case aiwf.DialogActionContinue, aiwf.DialogActionComplete:
+                if {{ if .AssignToResult }}true{{ else }}false{{ end }} {
+                    result = mergeWorkflowOutput(result, {{ $wf.OutputType }}(output))
+                }
+                completed = true
+            default:
+                if settings.ThreadManager != nil && threadState != nil {
+                    _ = settings.ThreadManager.Close(ctx, threadState)
+                }
+                return result, mergeTraces(traces...), fmt.Errorf("step {{ .Name }}: unsupported dialog action %d", decision.Action)
+            }
+
+            if settings.ThreadManager != nil && threadState != nil {
+                _ = settings.ThreadManager.Close(ctx, threadState)
+            }
+            break
         }
-        prev[{{ printf "%q" .Name }}] = output
-        traces = append(traces, trace)
-        {{- if .AssignToResult }}
-        result = mergeWorkflowOutput(result, {{ $wf.MethodName }}Output(output))
-        {{- end }}
+        if !completed {
+            if settings.ThreadManager != nil && threadState != nil {
+                _ = settings.ThreadManager.Close(ctx, threadState)
+            }
+            return result, mergeTraces(traces...), fmt.Errorf("step {{ .Name }} exceeded dialog rounds")
+        }
     }
-    {{- else }}
-    // TODO: агент {{ .Assistant }} не сгенерирован автоматически, добавьте вызов вручную.
-    {{- end }}
 {{- end }}
-
     return result, mergeTraces(traces...), nil
 }
-{{- end }}
+
+{{ end }}

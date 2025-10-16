@@ -34,6 +34,8 @@ type ModelCall struct {
 	Temperature     float64
 	Stream          bool
 	Payload         any
+	ThreadID        string
+	ThreadMetadata  map[string]any
 }
 
 // StreamChunk описывает инкрементальные ответы модели при потоковой генерации.
@@ -66,4 +68,25 @@ type ArtifactStore interface {
 	Put(ctx context.Context, key string, data []byte) error
 	Get(ctx context.Context, key string) ([]byte, bool, error)
 	Key(workflow, step, item, inputHash string) string
+}
+
+// ThreadState описывает состояние треда в провайдере.
+type ThreadState struct {
+	ID       string
+	Metadata map[string]any
+}
+
+// ThreadBinding описывает политику работы с тредом.
+type ThreadBinding struct {
+	Name     string
+	Provider string
+	Strategy string
+	Metadata map[string]any
+}
+
+// ThreadManager управляет жизненным циклом тредов между шагами.
+type ThreadManager interface {
+	Start(ctx context.Context, assistant string, binding ThreadBinding) (*ThreadState, error)
+	Continue(ctx context.Context, state *ThreadState, feedback string) error
+	Close(ctx context.Context, state *ThreadState) error
 }

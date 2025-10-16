@@ -1,0 +1,61 @@
+package generated
+
+import "github.com/andranikuz/aiwf/runtime/go/aiwf"
+
+type RunOptions struct {
+    ThreadManager   aiwf.ThreadManager
+    DialogDecider   aiwf.DialogDecider
+    MaxDialogRounds int
+}
+
+type RunOption func(*RunOptions)
+
+func WithThreadManager(tm aiwf.ThreadManager) RunOption {
+    return func(opts *RunOptions) {
+        opts.ThreadManager = tm
+    }
+}
+
+func WithDialogDecider(decider aiwf.DialogDecider) RunOption {
+    return func(opts *RunOptions) {
+        opts.DialogDecider = decider
+    }
+}
+
+func WithMaxDialogRounds(n int) RunOption {
+    return func(opts *RunOptions) {
+        opts.MaxDialogRounds = n
+    }
+}
+
+func applyRunOptions(defaultTM aiwf.ThreadManager, defaultDecider aiwf.DialogDecider, defaultRounds int, opts []RunOption) RunOptions {
+    settings := RunOptions{
+        ThreadManager:   defaultTM,
+        DialogDecider:   defaultDecider,
+        MaxDialogRounds: defaultRounds,
+    }
+    for _, opt := range opts {
+        opt(&settings)
+    }
+    if settings.DialogDecider == nil {
+        settings.DialogDecider = aiwf.DefaultDialogDecider{}
+    }
+    if settings.MaxDialogRounds <= 0 {
+        if defaultRounds > 0 {
+            settings.MaxDialogRounds = defaultRounds
+        } else {
+            settings.MaxDialogRounds = 1
+        }
+    }
+    return settings
+}
+
+func perStepMaxRounds(settings RunOptions, stepMax int) int {
+    if stepMax > 0 {
+        if settings.MaxDialogRounds > 0 && stepMax < settings.MaxDialogRounds {
+            return stepMax
+        }
+        return stepMax
+    }
+    return settings.MaxDialogRounds
+}

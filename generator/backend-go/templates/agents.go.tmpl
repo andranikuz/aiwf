@@ -27,14 +27,14 @@ type agents struct {
 func (a *agents) {{ .MethodName }}() {{ .InterfaceName }} { return &{{ .StructName }}{client: a.client} }
 
 type {{ .InterfaceName }} interface {
-    Run(ctx context.Context, input {{ .MethodName }}Input) ({{ .MethodName }}Output, *aiwf.Trace, error)
+    Run(ctx context.Context, input {{ .MethodName }}Input, state *aiwf.ThreadState) ({{ .MethodName }}Output, *aiwf.ThreadState, *aiwf.Trace, error)
 }
 
 type {{ .StructName }} struct {
     client aiwf.ModelClient
 }
 
-func (a *{{ .StructName }}) Run(ctx context.Context, input {{ .MethodName }}Input) ({{ .MethodName }}Output, *aiwf.Trace, error) {
+func (a *{{ .StructName }}) Run(ctx context.Context, input {{ .MethodName }}Input, state *aiwf.ThreadState) ({{ .MethodName }}Output, *aiwf.ThreadState, *aiwf.Trace, error) {
     call := aiwf.ModelCall{
         Model:           {{ printf "%q" .Model }},
         SystemPrompt:    {{ printf "%q" .SystemPrompt }},
@@ -45,18 +45,22 @@ func (a *{{ .StructName }}) Run(ctx context.Context, input {{ .MethodName }}Inpu
         {{- end }}
         Payload:         input,
     }
+    if state != nil {
+        call.ThreadID = state.ID
+        call.ThreadMetadata = state.Metadata
+    }
 
     raw, usage, err := a.client.CallJSONSchema(ctx, call)
     if err != nil {
-        return {{ .MethodName }}Output{}, nil, err
+        return {{ .MethodName }}Output{}, state, nil, err
     }
 
     var output {{ .MethodName }}Output
     if err := json.Unmarshal(raw, &output); err != nil {
-        return {{ .MethodName }}Output{}, nil, err
+        return {{ .MethodName }}Output{}, state, nil, err
     }
 
     trace := &aiwf.Trace{StepName: {{ printf "%q" .Name }}, Usage: usage}
-    return output, trace, nil
+    return output, state, trace, nil
 }
 {{- end }}

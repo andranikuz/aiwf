@@ -152,6 +152,9 @@ func (c *Client) newRequest(ctx context.Context, call aiwf.ModelCall) (*http.Req
 		Temperature:     call.Temperature,
 		Text:            format,
 	}
+	if meta := buildMetadata(call); len(meta) > 0 {
+		payload.Metadata = meta
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -179,11 +182,12 @@ func validateSchema(schemaRef string, data any) error {
 }
 
 type requestPayload struct {
-	Model           string      `json:"model"`
-	Input           any         `json:"input"`
-	MaxOutputTokens int         `json:"max_output_tokens,omitempty"`
-	Temperature     float64     `json:"temperature,omitempty"`
-	Text            textSection `json:"text"`
+	Model           string         `json:"model"`
+	Input           any            `json:"input"`
+	MaxOutputTokens int            `json:"max_output_tokens,omitempty"`
+	Temperature     float64        `json:"temperature,omitempty"`
+	Text            textSection    `json:"text"`
+	Metadata        map[string]any `json:"metadata,omitempty"`
 }
 
 type textSection struct {
@@ -191,9 +195,15 @@ type textSection struct {
 }
 
 type textFormat struct {
-	Type       string          `json:"type"`
-	Name       string          `json:"name"`
-	JSONSchema json.RawMessage `json:"schema"`
+	Type       string         `json:"type"`
+	Name       string         `json:"name"`
+	JSONSchema textJSONSchema `json:"json_schema"`
+}
+
+type textJSONSchema struct {
+	Name   string          `json:"name"`
+	Strict bool            `json:"strict"`
+	Schema json.RawMessage `json:"schema"`
 }
 
 type inputMessage struct {
@@ -277,9 +287,12 @@ func buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
 
 	return textSection{
 		Format: textFormat{
-			Type:       "json_schema",
-			Name:       name,
-			JSONSchema: call.OutputSchema,
+			Type: "json_schema",
+			JSONSchema: textJSONSchema{
+				Name:   name,
+				Strict: true,
+				Schema: call.OutputSchema,
+			},
 		},
 	}, nil
 }
@@ -322,6 +335,22 @@ func schemaFormatName(ref string) string {
 		name = "aiwf_output"
 	}
 	return name
+}
+
+func buildMetadata(call aiwf.ModelCall) map[string]any {
+	if call.ThreadID == "" && len(call.ThreadMetadata) == 0 {
+		return nil
+	}
+	meta := make(map[string]any)
+	if call.ThreadID != "" {
+		meta["thread_id"] = call.ThreadID
+	}
+	if len(call.ThreadMetadata) > 0 {
+		for k, v := range call.ThreadMetadata {
+			meta[k] = v
+		}
+	}
+	return meta
 }
 
 func extractStructuredText(messages []responseMessage) (string, error) {

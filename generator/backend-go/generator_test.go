@@ -62,6 +62,7 @@ func TestGenerateService(t *testing.T) {
 		"sdk/service.go":   "service.golden",
 		"sdk/agents.go":    "agents.golden",
 		"sdk/workflows.go": "workflows.golden",
+		"sdk/dialog.go":    "dialog.golden",
 		"sdk/contracts.go": "contracts.golden",
 	}
 

@@ -5,6 +5,7 @@ type Spec struct {
 	Version        string                   `yaml:"version"`
 	SchemaRegistry SchemaRegistrySpec       `yaml:"schema_registry"`
 	Imports        []ImportSpec             `yaml:"imports"`
+	Threads        map[string]ThreadSpec    `yaml:"threads"`
 	Assistants     map[string]AssistantSpec `yaml:"assistants"`
 	Workflows      map[string]WorkflowSpec  `yaml:"workflows"`
 	Resolved       SpecResolution           `yaml:"-"`
@@ -43,6 +44,8 @@ type AssistantSpec struct {
 	InputSchemaRef  string   `yaml:"input_schema_ref"`
 	OutputSchemaRef string   `yaml:"output_schema_ref"`
 	DependsOn       []string `yaml:"depends_on"`
+	Thread          *ThreadBindingSpec `yaml:"thread"`
+	Dialog          *DialogSpec        `yaml:"dialog"`
 	// Resolved пути заполняются загрузчиком.
 	Resolved AssistantResolution `yaml:"-"`
 }
@@ -55,10 +58,50 @@ type AssistantResolution struct {
 	OutputSchema     *SchemaDocument
 }
 
+// ThreadSpec описывает политику работы с тредами.
+type ThreadSpec struct {
+	Provider      string         `yaml:"provider"`
+	Strategy      string         `yaml:"strategy"`
+	Create        bool           `yaml:"create"`
+	CloseOnFinish bool           `yaml:"close_on_finish"`
+	TTLHours      int            `yaml:"ttl_hours"`
+	Metadata      map[string]any `yaml:"metadata"`
+}
+
+// ThreadBindingSpec привязывает ассистента/шаг к политике треда.
+type ThreadBindingSpec struct {
+	Use      string `yaml:"use"`
+	Strategy string `yaml:"strategy"`
+}
+
+// DialogSpec описывает диалоговые настройки.
+type DialogSpec struct {
+	MaxRounds int `yaml:"max_rounds"`
+}
+
+// ApprovalSpec описывает расширенные правила проверки.
+type ApprovalSpec struct {
+	Review               map[string]any `yaml:"review"`
+	RequireForRetry      bool           `yaml:"require_for_retry"`
+	MaxRetries           int            `yaml:"max_retries"`
+	OnApprove            map[string]any `yaml:"on_approve"`
+	OnReject             map[string]any `yaml:"on_reject"`
+	FeedbackTemplate     string         `yaml:"feedback_template"`
+	AutoContinueOnApprove *bool         `yaml:"auto_continue_on_approve"`
+}
+
+// NextStepSpec описывает переход к следующему шагу.
+type NextStepSpec struct {
+	Step             string         `yaml:"step"`
+	InputBinding     map[string]any `yaml:"input_binding"`
+	InputContractRef string         `yaml:"input_contract_ref"`
+}
+
 // WorkflowSpec описывает workflow.
 type WorkflowSpec struct {
 	Description string        `yaml:"description"`
 	DAG         []WorkflowDAG `yaml:"dag"`
+	Thread      *ThreadBindingSpec `yaml:"thread"`
 }
 
 // WorkflowDAG описывает шаг воркфлоу.
@@ -68,6 +111,10 @@ type WorkflowDAG struct {
 	Needs        []string       `yaml:"needs"`
 	Scatter      *ScatterSpec   `yaml:"scatter"`
 	InputBinding map[string]any `yaml:"input_binding"`
+	Thread       *ThreadBindingSpec `yaml:"thread"`
+	Dialog       *DialogSpec        `yaml:"dialog"`
+	Approval     *ApprovalSpec      `yaml:"approval"`
+	Next         *NextStepSpec      `yaml:"next"`
 }
 
 // ScatterSpec описывает fan-out шаг.

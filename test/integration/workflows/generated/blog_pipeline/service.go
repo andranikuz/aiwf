@@ -4,6 +4,7 @@ package blog_pipeline_sdk
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/andranikuz/aiwf/runtime/go/aiwf"
 )
@@ -24,11 +25,20 @@ func NewService(client aiwf.ModelClient) *Service {
 	}
 
 	// Initialize agents
+	researcherAgent := NewResearcherAgent(client)
+	researcherAgent.Types = s // Inject TypeProvider
+	outlinerAgent := NewOutlinerAgent(client)
+	outlinerAgent.Types = s // Inject TypeProvider
+	writerAgent := NewWriterAgent(client)
+	writerAgent.Types = s // Inject TypeProvider
+	editorAgent := NewEditorAgent(client)
+	editorAgent.Types = s // Inject TypeProvider
+
 	s.agents = &Agents{
-		Editor: NewEditorAgent(client),
-		Researcher: NewResearcherAgent(client),
-		Outliner: NewOutlinerAgent(client),
-		Writer: NewWriterAgent(client),
+		Editor: editorAgent,
+		Researcher: researcherAgent,
+		Outliner: outlinerAgent,
+		Writer: writerAgent,
 	}
 
 	// Initialize workflows
@@ -68,14 +78,14 @@ func (s *Service) GetTypeMetadata(typeName string) (any, error) {
 // GetInputTypeFor returns input type for an agent
 func (s *Service) GetInputTypeFor(agentName string) (string, any, error) {
 	switch agentName {
-	case "writer":
-		return "WritingInput", TypeMetadata["WritingInput"], nil
-	case "editor":
-		return "EditInput", TypeMetadata["EditInput"], nil
 	case "researcher":
 		return "ResearchInput", TypeMetadata["ResearchInput"], nil
 	case "outliner":
 		return "OutlineInput", TypeMetadata["OutlineInput"], nil
+	case "writer":
+		return "WritingInput", TypeMetadata["WritingInput"], nil
+	case "editor":
+		return "EditInput", TypeMetadata["EditInput"], nil
 	default:
 		return "", nil, fmt.Errorf("agent %s not found", agentName)
 	}

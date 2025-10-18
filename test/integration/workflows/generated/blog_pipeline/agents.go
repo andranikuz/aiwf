@@ -18,6 +18,81 @@ type Agents struct {
 	Editor *EditorAgent
 }
 
+// ResearcherAgent represents the researcher agent
+type ResearcherAgent struct {
+	aiwf.AgentBase
+	threadBinding *aiwf.ThreadBinding
+}
+
+// NewResearcherAgent creates a new researcher agent
+func NewResearcherAgent(client aiwf.ModelClient) *ResearcherAgent {
+	return &ResearcherAgent{
+		AgentBase: aiwf.AgentBase{
+			Config: aiwf.AgentConfig{
+				Name:           "researcher",
+				Model:          "gpt-4o",
+				SystemPrompt:   `Research topics thoroughly`,
+				InputTypeName:  "ResearchInput",
+				OutputTypeName: "ResearchOutput",
+				MaxTokens:      2000,
+				Temperature:    0.7,
+			},
+			Client: client,
+		},
+		threadBinding: &aiwf.ThreadBinding{
+			Name:     "blog_thread",
+			Strategy: "",
+		},
+	}
+}
+
+// Run executes the researcher agent
+func (a *ResearcherAgent) Run(ctx context.Context, input ResearchInput) (*ResearchOutput, *aiwf.Trace, error) {
+	// Validate input
+	if err := ValidateResearchInput(&input); err != nil {
+		return nil, nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Call model
+	result, trace, err := a.CallModel(ctx, input, nil)
+	if err != nil {
+		return nil, trace, err
+	}
+
+	// Parse response
+	var output ResearchOutput
+	if err := json.Unmarshal(result, &output); err != nil {
+		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &output, trace, nil
+}
+
+// RunWithThread executes the researcher agent with thread state
+func (a *ResearcherAgent) RunWithThread(ctx context.Context, input ResearchInput, thread *aiwf.ThreadState) (*ResearchOutput, *aiwf.Trace, error) {
+	if err := ValidateResearchInput(&input); err != nil {
+		return nil, nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	result, trace, err := a.CallModel(ctx, input, thread)
+	if err != nil {
+		return nil, trace, err
+	}
+
+	var output ResearchOutput
+	if err := json.Unmarshal(result, &output); err != nil {
+		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &output, trace, nil
+}
+
+// ThreadBinding returns thread configuration for researcher
+func (a *ResearcherAgent) ThreadBinding() *aiwf.ThreadBinding {
+	return a.threadBinding
+}
+
+
 // OutlinerAgent represents the outliner agent
 type OutlinerAgent struct {
 	aiwf.AgentBase
@@ -239,81 +314,6 @@ func (a *EditorAgent) RunWithThread(ctx context.Context, input EditInput, thread
 
 // ThreadBinding returns thread configuration for editor
 func (a *EditorAgent) ThreadBinding() *aiwf.ThreadBinding {
-	return a.threadBinding
-}
-
-
-// ResearcherAgent represents the researcher agent
-type ResearcherAgent struct {
-	aiwf.AgentBase
-	threadBinding *aiwf.ThreadBinding
-}
-
-// NewResearcherAgent creates a new researcher agent
-func NewResearcherAgent(client aiwf.ModelClient) *ResearcherAgent {
-	return &ResearcherAgent{
-		AgentBase: aiwf.AgentBase{
-			Config: aiwf.AgentConfig{
-				Name:           "researcher",
-				Model:          "gpt-4o",
-				SystemPrompt:   `Research topics thoroughly`,
-				InputTypeName:  "ResearchInput",
-				OutputTypeName: "ResearchOutput",
-				MaxTokens:      2000,
-				Temperature:    0.7,
-			},
-			Client: client,
-		},
-		threadBinding: &aiwf.ThreadBinding{
-			Name:     "blog_thread",
-			Strategy: "",
-		},
-	}
-}
-
-// Run executes the researcher agent
-func (a *ResearcherAgent) Run(ctx context.Context, input ResearchInput) (*ResearchOutput, *aiwf.Trace, error) {
-	// Validate input
-	if err := ValidateResearchInput(&input); err != nil {
-		return nil, nil, fmt.Errorf("validation failed: %w", err)
-	}
-
-	// Call model
-	result, trace, err := a.CallModel(ctx, input, nil)
-	if err != nil {
-		return nil, trace, err
-	}
-
-	// Parse response
-	var output ResearchOutput
-	if err := json.Unmarshal(result, &output); err != nil {
-		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &output, trace, nil
-}
-
-// RunWithThread executes the researcher agent with thread state
-func (a *ResearcherAgent) RunWithThread(ctx context.Context, input ResearchInput, thread *aiwf.ThreadState) (*ResearchOutput, *aiwf.Trace, error) {
-	if err := ValidateResearchInput(&input); err != nil {
-		return nil, nil, fmt.Errorf("validation failed: %w", err)
-	}
-
-	result, trace, err := a.CallModel(ctx, input, thread)
-	if err != nil {
-		return nil, trace, err
-	}
-
-	var output ResearchOutput
-	if err := json.Unmarshal(result, &output); err != nil {
-		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &output, trace, nil
-}
-
-// ThreadBinding returns thread configuration for researcher
-func (a *ResearcherAgent) ThreadBinding() *aiwf.ThreadBinding {
 	return a.threadBinding
 }
 

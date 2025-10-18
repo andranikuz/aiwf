@@ -4,31 +4,39 @@ package customer_support_sdk
 
 import (
 	"regexp"
-	"time"
 )
+
+// Customer represents Customer
+type Customer struct {
+	Email string `json:"email"`
+	SubscriptionTier string `json:"subscription_tier"`
+	AccountCreated time.Time `json:"account_created"`
+	Id string `json:"id"`
+	Name string `json:"name"`
+}
 
 // Message represents Message
 type Message struct {
-	Content string `json:"content"`
 	Timestamp time.Time `json:"timestamp"`
 	Id string `json:"id"`
 	SenderType string `json:"sender_type"`
+	Content string `json:"content"`
 }
 
 // Attachment represents Attachment
 type Attachment struct {
+	MimeType string `json:"mime_type"`
 	SizeBytes int `json:"size_bytes"`
 	Url string `json:"url"`
 	Filename string `json:"filename"`
-	MimeType string `json:"mime_type"`
 }
 
 // ConversationContext represents ConversationContext
 type ConversationContext struct {
-	SessionId string `json:"session_id"`
-	TicketId string `json:"ticket_id"`
 	PreviousMessages []*Message `json:"previous_messages"`
 	CustomerInfo *Customer `json:"customer_info"`
+	SessionId string `json:"session_id"`
+	TicketId string `json:"ticket_id"`
 }
 
 // Action represents Action
@@ -48,42 +56,13 @@ type SupportMessage struct {
 
 // SupportResponse represents SupportResponse
 type SupportResponse struct {
-	Message string `json:"message"`
-	Actions []*Action `json:"actions"`
 	Escalate bool `json:"escalate"`
 	ResolutionStatus string `json:"resolution_status"`
-}
-
-// Customer represents Customer
-type Customer struct {
-	Id string `json:"id"`
-	Name string `json:"name"`
-	Email string `json:"email"`
-	SubscriptionTier string `json:"subscription_tier"`
-	AccountCreated time.Time `json:"account_created"`
+	Message string `json:"message"`
+	Actions []*Action `json:"actions"`
 }
 
 // ============ VALIDATORS ============
-
-// ValidateSupportResponse validates SupportResponse
-func ValidateSupportResponse(v *SupportResponse) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateCustomer validates Customer
-func ValidateCustomer(v *Customer) error {
-	if !isValidEmail(v.Email) {
-		return fmt.Errorf("email must be a valid email")
-	}
-	return nil
-}
-
-// ValidateMessage validates Message
-func ValidateMessage(v *Message) error {
-	// No validation rules
-	return nil
-}
 
 // ValidateAttachment validates Attachment
 func ValidateAttachment(v *Attachment) error {
@@ -109,15 +88,316 @@ func ValidateSupportMessage(v *SupportMessage) error {
 	return nil
 }
 
+// ValidateSupportResponse validates SupportResponse
+func ValidateSupportResponse(v *SupportResponse) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateCustomer validates Customer
+func ValidateCustomer(v *Customer) error {
+	if !isValidEmail(v.Email) {
+		return fmt.Errorf("email must be a valid email")
+	}
+	return nil
+}
+
+// ValidateMessage validates Message
+func ValidateMessage(v *Message) error {
+	// No validation rules
+	return nil
+}
+
 // ============ TYPE METADATA ============
 
 // TypeMetadata exports type definitions for providers
 var TypeMetadata = map[string]interface{}{
-	"Message": nil, // TODO: export actual TypeDef
-	"Attachment": nil, // TODO: export actual TypeDef
-	"ConversationContext": nil, // TODO: export actual TypeDef
-	"Action": nil, // TODO: export actual TypeDef
-	"SupportMessage": nil, // TODO: export actual TypeDef
-	"SupportResponse": nil, // TODO: export actual TypeDef
-	"Customer": nil, // TODO: export actual TypeDef
+	"SupportMessage": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"context": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"previous_messages": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"sender_type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"customer", "agent", "system"},
+	},
+			"content": map[string]interface{}{
+		"type": "string",
+	},
+			"timestamp": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+		},
+		"required": []string{"sender_type", "content", "timestamp", "id"},
+		"additionalProperties": false,
+	},
+	},
+			"customer_info": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"email": map[string]interface{}{
+		"type": "string",
+	},
+			"subscription_tier": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"free", "basic", "pro", "enterprise"},
+	},
+			"account_created": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"email", "subscription_tier", "account_created", "id", "name"},
+		"additionalProperties": false,
+	},
+			"session_id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"ticket_id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+		},
+		"required": []string{"previous_messages", "customer_info", "session_id", "ticket_id"},
+		"additionalProperties": false,
+	},
+			"attachments": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"url": map[string]interface{}{
+		"type": "string",
+	},
+			"filename": map[string]interface{}{
+		"type": "string",
+	},
+			"mime_type": map[string]interface{}{
+		"type": "string",
+	},
+			"size_bytes": map[string]interface{}{
+		"type": "integer",
+	},
+		},
+		"required": []string{"url", "filename", "mime_type", "size_bytes"},
+		"additionalProperties": false,
+	},
+	},
+			"customer_id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"message": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"context", "attachments", "customer_id", "message"},
+		"additionalProperties": false,
+	},
+	"SupportResponse": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"escalate": map[string]interface{}{
+		"type": "boolean",
+	},
+			"resolution_status": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"pending", "resolved", "escalated"},
+	},
+			"message": map[string]interface{}{
+		"type": "string",
+	},
+			"actions": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"open_ticket", "send_email", "schedule_call", "show_article"},
+	},
+			"label": map[string]interface{}{
+		"type": "string",
+	},
+			"data": map[string]interface{}{
+		"type": "object",
+		"additionalProperties": true,
+	},
+		},
+		"required": []string{"type", "label", "data"},
+		"additionalProperties": false,
+	},
+	},
+		},
+		"required": []string{"escalate", "resolution_status", "message", "actions"},
+		"additionalProperties": false,
+	},
+	"Customer": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"email": map[string]interface{}{
+		"type": "string",
+	},
+			"subscription_tier": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"free", "basic", "pro", "enterprise"},
+	},
+			"account_created": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"email", "subscription_tier", "account_created", "id", "name"},
+		"additionalProperties": false,
+	},
+	"Message": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"timestamp": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"sender_type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"customer", "agent", "system"},
+	},
+			"content": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"timestamp", "id", "sender_type", "content"},
+		"additionalProperties": false,
+	},
+	"Attachment": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"mime_type": map[string]interface{}{
+		"type": "string",
+	},
+			"size_bytes": map[string]interface{}{
+		"type": "integer",
+	},
+			"url": map[string]interface{}{
+		"type": "string",
+	},
+			"filename": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"mime_type", "size_bytes", "url", "filename"},
+		"additionalProperties": false,
+	},
+	"ConversationContext": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"customer_info": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"email": map[string]interface{}{
+		"type": "string",
+	},
+			"subscription_tier": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"free", "basic", "pro", "enterprise"},
+	},
+			"account_created": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"email", "subscription_tier", "account_created", "id", "name"},
+		"additionalProperties": false,
+	},
+			"session_id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"ticket_id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"previous_messages": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"timestamp": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"sender_type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"customer", "agent", "system"},
+	},
+			"content": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"timestamp", "id", "sender_type", "content"},
+		"additionalProperties": false,
+	},
+	},
+		},
+		"required": []string{"customer_info", "session_id", "ticket_id", "previous_messages"},
+		"additionalProperties": false,
+	},
+	"Action": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"open_ticket", "send_email", "schedule_call", "show_article"},
+	},
+			"label": map[string]interface{}{
+		"type": "string",
+	},
+			"data": map[string]interface{}{
+		"type": "object",
+		"additionalProperties": true,
+	},
+		},
+		"required": []string{"type", "label", "data"},
+		"additionalProperties": false,
+	},
 }

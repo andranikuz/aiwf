@@ -26,6 +26,7 @@ func NewService(client aiwf.ModelClient) *Service {
 	s.agents = &Agents{
 		SupportBot: NewSupportBotAgent(client),
 	}
+	s.agents.SupportBot.Types = s // Inject TypeProvider
 
 	return s
 }

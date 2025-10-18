@@ -4,21 +4,59 @@ package blog_pipeline_sdk
 
 import (
 	"regexp"
-	"time"
 )
+
+// ResearchOutput represents ResearchOutput
+type ResearchOutput struct {
+	Sources []*Source `json:"sources"`
+	Summary string `json:"summary"`
+	KeyPoints []string `json:"key_points"`
+}
+
+// OutlineInput represents OutlineInput
+type OutlineInput struct {
+	Topic string `json:"topic"`
+	ResearchData *ResearchOutput `json:"research_data"`
+}
+
+// WritingInput represents WritingInput
+type WritingInput struct {
+	Outline *BlogOutline `json:"outline"`
+	StyleGuide *StyleGuide `json:"style_guide"`
+}
+
+// EditInput represents EditInput
+type EditInput struct {
+	Draft *Draft `json:"draft"`
+}
+
+// ResearchInput represents ResearchInput
+type ResearchInput struct {
+	Depth string `json:"depth"`
+	Topic string `json:"topic"`
+}
+
+// BlogRequest represents BlogRequest
+type BlogRequest struct {
+	StyleGuide *StyleGuide `json:"style_guide"`
+	Topic string `json:"topic"`
+	Keywords []string `json:"keywords"`
+	TargetAudience string `json:"target_audience"`
+	WordCountTarget int `json:"word_count_target"`
+}
 
 // User represents User
 type User struct {
+	Id string `json:"id"`
 	Email string `json:"email"`
 	Name string `json:"name"`
-	Id string `json:"id"`
 }
 
 // StyleGuide represents StyleGuide
 type StyleGuide struct {
+	Perspective string `json:"perspective"`
 	Tone string `json:"tone"`
 	Voice string `json:"voice"`
-	Perspective string `json:"perspective"`
 }
 
 // Source represents Source
@@ -28,60 +66,27 @@ type Source struct {
 	Credibility float64 `json:"credibility"`
 }
 
-// Section represents Section
-type Section struct {
-	Id string `json:"id"`
-	Title string `json:"title"`
-	Points []string `json:"points"`
-}
-
-// ResearchInput represents ResearchInput
-type ResearchInput struct {
-	Topic string `json:"topic"`
-	Depth string `json:"depth"`
-}
-
-// OutlineInput represents OutlineInput
-type OutlineInput struct {
-	ResearchData *ResearchOutput `json:"research_data"`
-	Topic string `json:"topic"`
-}
-
-// EditInput represents EditInput
-type EditInput struct {
-	Draft *Draft `json:"draft"`
-}
-
-// BlogRequest represents BlogRequest
-type BlogRequest struct {
-	WordCountTarget int `json:"word_count_target"`
-	StyleGuide *StyleGuide `json:"style_guide"`
-	Topic string `json:"topic"`
-	Keywords []string `json:"keywords"`
-	TargetAudience string `json:"target_audience"`
-}
-
-// ResearchOutput represents ResearchOutput
-type ResearchOutput struct {
-	Sources []*Source `json:"sources"`
-	Summary string `json:"summary"`
-	KeyPoints []string `json:"key_points"`
-}
-
 // PostMetadata represents PostMetadata
 type PostMetadata struct {
+	WordCount int `json:"word_count"`
+	ReadingTimeMinutes int `json:"reading_time_minutes"`
 	Author *User `json:"author"`
 	PublishedAt time.Time `json:"published_at"`
 	Tags []string `json:"tags"`
-	WordCount int `json:"word_count"`
-	ReadingTimeMinutes int `json:"reading_time_minutes"`
+}
+
+// Section represents Section
+type Section struct {
+	Title string `json:"title"`
+	Points []string `json:"points"`
+	Id string `json:"id"`
 }
 
 // BlogOutline represents BlogOutline
 type BlogOutline struct {
+	EstimatedWords int `json:"estimated_words"`
 	Title string `json:"title"`
 	Sections []*Section `json:"sections"`
-	EstimatedWords int `json:"estimated_words"`
 }
 
 // Draft represents Draft
@@ -91,21 +96,33 @@ type Draft struct {
 	WordCount int `json:"word_count"`
 }
 
-// WritingInput represents WritingInput
-type WritingInput struct {
-	Outline *BlogOutline `json:"outline"`
-	StyleGuide *StyleGuide `json:"style_guide"`
-}
-
 // PublishedPost represents PublishedPost
 type PublishedPost struct {
+	Content string `json:"content"`
 	Excerpt string `json:"excerpt"`
 	Metadata *PostMetadata `json:"metadata"`
 	Title string `json:"title"`
-	Content string `json:"content"`
 }
 
 // ============ VALIDATORS ============
+
+// ValidatePublishedPost validates PublishedPost
+func ValidatePublishedPost(v *PublishedPost) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateResearchOutput validates ResearchOutput
+func ValidateResearchOutput(v *ResearchOutput) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateOutlineInput validates OutlineInput
+func ValidateOutlineInput(v *OutlineInput) error {
+	// No validation rules
+	return nil
+}
 
 // ValidateWritingInput validates WritingInput
 func ValidateWritingInput(v *WritingInput) error {
@@ -113,8 +130,20 @@ func ValidateWritingInput(v *WritingInput) error {
 	return nil
 }
 
-// ValidatePublishedPost validates PublishedPost
-func ValidatePublishedPost(v *PublishedPost) error {
+// ValidateEditInput validates EditInput
+func ValidateEditInput(v *EditInput) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateResearchInput validates ResearchInput
+func ValidateResearchInput(v *ResearchInput) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateBlogRequest validates BlogRequest
+func ValidateBlogRequest(v *BlogRequest) error {
 	// No validation rules
 	return nil
 }
@@ -139,44 +168,14 @@ func ValidateSource(v *Source) error {
 	return nil
 }
 
-// ValidateSection validates Section
-func ValidateSection(v *Section) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateResearchInput validates ResearchInput
-func ValidateResearchInput(v *ResearchInput) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateOutlineInput validates OutlineInput
-func ValidateOutlineInput(v *OutlineInput) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateEditInput validates EditInput
-func ValidateEditInput(v *EditInput) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateBlogRequest validates BlogRequest
-func ValidateBlogRequest(v *BlogRequest) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateResearchOutput validates ResearchOutput
-func ValidateResearchOutput(v *ResearchOutput) error {
-	// No validation rules
-	return nil
-}
-
 // ValidatePostMetadata validates PostMetadata
 func ValidatePostMetadata(v *PostMetadata) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateSection validates Section
+func ValidateSection(v *Section) error {
 	// No validation rules
 	return nil
 }
@@ -197,18 +196,441 @@ func ValidateDraft(v *Draft) error {
 
 // TypeMetadata exports type definitions for providers
 var TypeMetadata = map[string]interface{}{
-	"PostMetadata": nil, // TODO: export actual TypeDef
-	"BlogOutline": nil, // TODO: export actual TypeDef
-	"Draft": nil, // TODO: export actual TypeDef
-	"WritingInput": nil, // TODO: export actual TypeDef
-	"PublishedPost": nil, // TODO: export actual TypeDef
-	"User": nil, // TODO: export actual TypeDef
-	"StyleGuide": nil, // TODO: export actual TypeDef
-	"Source": nil, // TODO: export actual TypeDef
-	"Section": nil, // TODO: export actual TypeDef
-	"ResearchInput": nil, // TODO: export actual TypeDef
-	"OutlineInput": nil, // TODO: export actual TypeDef
-	"EditInput": nil, // TODO: export actual TypeDef
-	"BlogRequest": nil, // TODO: export actual TypeDef
-	"ResearchOutput": nil, // TODO: export actual TypeDef
+	"User": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"email": map[string]interface{}{
+		"type": "string",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"id", "email", "name"},
+		"additionalProperties": false,
+	},
+	"StyleGuide": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"perspective": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"first", "second", "third"},
+	},
+			"tone": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"formal", "casual", "technical", "conversational"},
+	},
+			"voice": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"active", "passive"},
+	},
+		},
+		"required": []string{"perspective", "tone", "voice"},
+		"additionalProperties": false,
+	},
+	"Source": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"credibility": map[string]interface{}{
+		"type": "number",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"url": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"credibility", "title", "url"},
+		"additionalProperties": false,
+	},
+	"PostMetadata": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"author": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"email": map[string]interface{}{
+		"type": "string",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"id", "email", "name"},
+		"additionalProperties": false,
+	},
+			"published_at": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"tags": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+			"word_count": map[string]interface{}{
+		"type": "integer",
+	},
+			"reading_time_minutes": map[string]interface{}{
+		"type": "integer",
+	},
+		},
+		"required": []string{"author", "published_at", "tags", "word_count", "reading_time_minutes"},
+		"additionalProperties": false,
+	},
+	"Section": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"points": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+			"id": map[string]interface{}{
+		"type": "string",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"points", "id", "title"},
+		"additionalProperties": false,
+	},
+	"BlogOutline": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"sections": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+		"type": "string",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"points": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+		},
+		"required": []string{"id", "title", "points"},
+		"additionalProperties": false,
+	},
+	},
+			"estimated_words": map[string]interface{}{
+		"type": "integer",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"sections", "estimated_words", "title"},
+		"additionalProperties": false,
+	},
+	"Draft": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"content": map[string]interface{}{
+		"type": "string",
+	},
+			"word_count": map[string]interface{}{
+		"type": "integer",
+	},
+		},
+		"required": []string{"title", "content", "word_count"},
+		"additionalProperties": false,
+	},
+	"PublishedPost": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"metadata": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"author": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+		"type": "string",
+		"format": "uuid",
+	},
+			"email": map[string]interface{}{
+		"type": "string",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"id", "email", "name"},
+		"additionalProperties": false,
+	},
+			"published_at": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"tags": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+			"word_count": map[string]interface{}{
+		"type": "integer",
+	},
+			"reading_time_minutes": map[string]interface{}{
+		"type": "integer",
+	},
+		},
+		"required": []string{"author", "published_at", "tags", "word_count", "reading_time_minutes"},
+		"additionalProperties": false,
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"content": map[string]interface{}{
+		"type": "string",
+	},
+			"excerpt": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"metadata", "title", "content", "excerpt"},
+		"additionalProperties": false,
+	},
+	"ResearchOutput": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"sources": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"url": map[string]interface{}{
+		"type": "string",
+	},
+			"credibility": map[string]interface{}{
+		"type": "number",
+	},
+		},
+		"required": []string{"title", "url", "credibility"},
+		"additionalProperties": false,
+	},
+	},
+			"summary": map[string]interface{}{
+		"type": "string",
+	},
+			"key_points": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+		},
+		"required": []string{"sources", "summary", "key_points"},
+		"additionalProperties": false,
+	},
+	"OutlineInput": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"topic": map[string]interface{}{
+		"type": "string",
+	},
+			"research_data": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"sources": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"url": map[string]interface{}{
+		"type": "string",
+	},
+			"credibility": map[string]interface{}{
+		"type": "number",
+	},
+		},
+		"required": []string{"title", "url", "credibility"},
+		"additionalProperties": false,
+	},
+	},
+			"summary": map[string]interface{}{
+		"type": "string",
+	},
+			"key_points": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+		},
+		"required": []string{"sources", "summary", "key_points"},
+		"additionalProperties": false,
+	},
+		},
+		"required": []string{"topic", "research_data"},
+		"additionalProperties": false,
+	},
+	"WritingInput": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"outline": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"estimated_words": map[string]interface{}{
+		"type": "integer",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"sections": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+		"type": "string",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"points": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+		},
+		"required": []string{"id", "title", "points"},
+		"additionalProperties": false,
+	},
+	},
+		},
+		"required": []string{"estimated_words", "title", "sections"},
+		"additionalProperties": false,
+	},
+			"style_guide": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"perspective": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"first", "second", "third"},
+	},
+			"tone": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"formal", "casual", "technical", "conversational"},
+	},
+			"voice": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"active", "passive"},
+	},
+		},
+		"required": []string{"perspective", "tone", "voice"},
+		"additionalProperties": false,
+	},
+		},
+		"required": []string{"outline", "style_guide"},
+		"additionalProperties": false,
+	},
+	"EditInput": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"draft": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"word_count": map[string]interface{}{
+		"type": "integer",
+	},
+			"title": map[string]interface{}{
+		"type": "string",
+	},
+			"content": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"word_count", "title", "content"},
+		"additionalProperties": false,
+	},
+		},
+		"required": []string{"draft"},
+		"additionalProperties": false,
+	},
+	"ResearchInput": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"topic": map[string]interface{}{
+		"type": "string",
+	},
+			"depth": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"basic", "detailed", "comprehensive"},
+	},
+		},
+		"required": []string{"topic", "depth"},
+		"additionalProperties": false,
+	},
+	"BlogRequest": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"topic": map[string]interface{}{
+		"type": "string",
+	},
+			"keywords": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
+			"target_audience": map[string]interface{}{
+		"type": "string",
+	},
+			"word_count_target": map[string]interface{}{
+		"type": "integer",
+	},
+			"style_guide": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"perspective": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"first", "second", "third"},
+	},
+			"tone": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"formal", "casual", "technical", "conversational"},
+	},
+			"voice": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"active", "passive"},
+	},
+		},
+		"required": []string{"perspective", "tone", "voice"},
+		"additionalProperties": false,
+	},
+		},
+		"required": []string{"topic", "keywords", "target_audience", "word_count_target", "style_guide"},
+		"additionalProperties": false,
+	},
 }

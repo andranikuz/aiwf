@@ -1,8 +1,5 @@
-/examples/book
 /.idea
 .DS_Store
-examples/blog/config/prompts/outline.md
-/examples/blog/config
 
 # Environment files with secrets
 .env
@@ -17,5 +14,4 @@ test_outputs/
 *.out
 coverage.txt
 coverage.html
-.env
 .env

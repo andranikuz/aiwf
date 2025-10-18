@@ -267,12 +267,14 @@ func (c *Client) buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error)
 	var err error
 
 	if call.TypeMetadata != nil {
+		log.Printf("openai: buildJSONSchemaFormat - TypeMetadata is not nil")
 		schema, err = c.converter.ConvertTypeMetadata(call.TypeMetadata)
 		if err != nil {
 			return textSection{}, fmt.Errorf("openai: failed to convert type metadata: %w", err)
 		}
 	} else {
 		// If no metadata provided, create a minimal schema
+		log.Printf("openai: buildJSONSchemaFormat - WARNING: TypeMetadata is nil, using minimal schema")
 		minimalSchema := map[string]any{
 			"type": "object",
 			"properties": map[string]any{},

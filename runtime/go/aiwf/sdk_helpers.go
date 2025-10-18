@@ -43,9 +43,20 @@ func (a *AgentBase) SystemPrompt() string {
 func (a *AgentBase) CallModel(ctx context.Context, input any, thread *ThreadState) (json.RawMessage, *Trace, error) {
 	// Получаем метаданные типов если есть TypeProvider
 	var typeMetadata any
+
+	fmt.Printf("[DEBUG] CallModel: Agent=%s, Types=%v, OutputTypeName=%s\n",
+		a.Config.Name, a.Types != nil, a.Config.OutputTypeName)
+
 	if a.Types != nil && a.Config.OutputTypeName != "" {
-		meta, _ := a.Types.GetTypeMetadata(a.Config.OutputTypeName)
-		typeMetadata = meta
+		meta, err := a.Types.GetTypeMetadata(a.Config.OutputTypeName)
+		if err != nil {
+			fmt.Printf("[DEBUG] CallModel: GetTypeMetadata error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] CallModel: Got TypeMetadata for %s\n", a.Config.OutputTypeName)
+			typeMetadata = meta
+		}
+	} else {
+		fmt.Printf("[DEBUG] CallModel: No TypeProvider or OutputTypeName empty\n")
 	}
 
 	call := ModelCall{

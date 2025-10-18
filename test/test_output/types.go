@@ -11,8 +11,8 @@ type UserRequest struct {
 // ExtractedData represents ExtractedData
 type ExtractedData struct {
 	Metadata map[string]interface{} `json:"metadata"`
-	Entities []*Entity `json:"entities"`
-	Count int `json:"count"`
+	Entities []*Entity              `json:"entities"`
+	Count int                       `json:"count"`
 }
 
 // Entity represents Entity

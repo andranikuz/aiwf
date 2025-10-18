@@ -1,29 +1,98 @@
-# AI Workflow Framework (AIWF)
+# AIWF - AI Workflow Framework
 
-AIWF — это фреймворк для описания и генерации SDK под AI-воркфлоу. Конфигурации задаются в YAML, после чего CLI `aiwf` генерирует типизированный код для Go (другие языки в работе).
+AIWF — фреймворк для построения типобезопасных, композируемых AI-воркфлоу с поддержкой генерации кода.
 
-## Структура проекта
+## Возможности
 
-- `cmd/aiwf` — CLI (`aiwf sdk`, `aiwf validate`).
-- `generator/` — парсер спецификации и backend’ы генерации (Go/TS/Py).
-- `runtime/go/aiwf` — контракты для исполнения воркфлоу (ModelClient, ThreadManager, ArtifactStore и т.д.).
-- `providers/` — реализации провайдеров (OpenAI, Anthropic, local stub).
-- `examples/` — примеры конфигураций и сгенерированных SDK.
-- `docs/` — документация по провайдерам, ТЗ, roadmap.
+- **Генерация типобезопасного SDK** из YAML-спецификаций
+- **Упрощённая система типов** с ограничениями (`string(1..100)`, `enum(...)` и т.д.)
+- **Оркестрация мульти-агентов** со структурированными входами/выходами
+- **Абстракция провайдеров** (OpenAI, Claude и др.)
+- **Управление тредами** для контекста диалогов
+- **Композиция воркфлоу** для сложных многошаговых задач
 
 ## Быстрый старт
 
-1. Установите CLI:
-   ```bash
-   go install ./cmd/aiwf
-   ```
-2. Сгенерируйте SDK:
-   ```bash
-   aiwf sdk \
-     --file examples/blog/config/sdk.yaml \
-     --out examples/blog/sdk \
-     --package blog
-   ```
-3. Ознакомьтесь с `README` конкретного примера (например, `examples/blog/README.md`).
+### Установка
 
-Подробные инструкции по YAML-спецификации и диалоговым воркфлоу смотрите в `docs/dialog-workflows.md`.
+```bash
+go install ./cmd/aiwf
+```
+
+### Использование CLI
+
+```bash
+# Валидация YAML-конфигурации
+aiwf validate -f config.yaml
+
+# Генерация SDK
+aiwf sdk -f config.yaml -o ./generated
+```
+
+### Пример YAML-конфигурации
+
+```yaml
+types:
+  UserRequest:
+    text: string(1..1000)
+    language: enum(en, es, fr, de)
+
+  Translation:
+    text: string
+    confidence: number(0..1)
+
+assistants:
+  translator:
+    model: gpt-4o-mini
+    system_prompt: Переведи текст на указанный язык
+    input_type: UserRequest
+    output_type: Translation
+```
+
+## Структура проекта
+
+- **`cmd/aiwf`** - CLI-инструмент для валидации и генерации SDK
+- **`generator/`** - Движок генерации кода ([подробнее](./generator/README.md))
+- **`runtime/`** - Runtime-библиотеки для разных языков ([подробнее](./runtime/README.md))
+- **`providers/`** - Реализации LLM-провайдеров ([подробнее](./providers/README.md))
+- **`templates/`** - Готовые шаблоны воркфлоу
+
+## Документация
+
+- [Документация генератора](./generator/README.md) - YAML-спецификация и система типов
+- [Документация runtime](./runtime/README.md) - Runtime-контракты и интерфейсы
+- [Документация провайдеров](./providers/README.md) - Руководство по реализации провайдеров
+- [Шаблоны](./templates/README.md) - Примеры конфигураций
+
+## Система типов
+
+AIWF использует упрощённую нотацию типов:
+
+### Базовые типы
+- `string` - Строка
+- `int` - Целое число
+- `number` - Число с плавающей точкой
+- `bool` - Булево значение
+- `any` - Любой тип
+- `datetime`, `date`, `uuid` - Специальные типы
+
+### Ограничения
+- `string(1..100)` - Ограничение длины строки
+- `int(0..100)` - Числовой диапазон
+- `enum(value1, value2)` - Перечисление
+- `Type[]` - Массив типов
+- `map(string, any)` - Словарь
+- `$Reference` - Ссылка на другой тип
+
+## Roadmap
+
+- [ ] Применение ограничений валидации в сгенерированном коде
+- [ ] Поддержка генерации workflows
+- [ ] Диалоговый режим для ассистентов
+- [ ] Поддержка стриминга
+- [ ] Генератор Python SDK
+- [ ] Генератор TypeScript SDK
+
+## Лицензия
+
+MIT

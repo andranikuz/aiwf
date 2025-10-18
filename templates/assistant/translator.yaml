@@ -1,0 +1,38 @@
+version: 0.3-proposal
+# Переводчик с контролем качества
+
+assistants:
+  translator:
+    use: openai
+    model: gpt-4o
+    system_prompt: |
+      Translate text accurately while preserving meaning and tone.
+      Maintain formatting and structure.
+      Adapt cultural references appropriately.
+    input_type: TranslationRequest
+    output_type: TranslationResult
+
+types:
+  TranslationRequest:
+    text: string(1..10000)
+    source_language: string(2)  # ISO 639-1 code
+    target_language: string(2)
+    domain: enum(general, technical, legal, medical, marketing)
+    preserve_formatting: bool
+
+  TranslationResult:
+    translated_text: string
+    confidence_score: number(0..1)
+    alternatives: $Alternative[]
+    notes: $TranslationNote[]
+
+  Alternative:
+    text: string
+    context: string
+    preference_score: number(0..1)
+
+  TranslationNote:
+    type: enum(cultural_adaptation, idiom, technical_term, ambiguity)
+    original_phrase: string
+    translated_phrase: string
+    explanation: string

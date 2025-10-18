@@ -32,9 +32,10 @@ type ClientConfig struct {
 
 // Client реализует aiwf.ModelClient для OpenAI Responses API.
 type Client struct {
-	baseURL string
-	apiKey  string
-	http    *http.Client
+	baseURL   string
+	apiKey    string
+	http      *http.Client
+	converter *SchemaConverter
 }
 
 // NewClient создаёт клиента с базовыми значениями.
@@ -61,9 +62,10 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL: base,
-		apiKey:  cfg.APIKey,
-		http:    httpClient,
+		baseURL:   base,
+		apiKey:    cfg.APIKey,
+		http:      httpClient,
+		converter: NewSchemaConverter(),
 	}, nil
 }
 
@@ -97,19 +99,8 @@ func (c *Client) CallJSONSchema(ctx context.Context, call aiwf.ModelCall) ([]byt
 	}
 	log.Printf("openai: output json=%s", structuredText)
 
-	var payload any
-	if err := json.Unmarshal([]byte(structuredText), &payload); err != nil {
-		return nil, aiwf.Tokens{}, fmt.Errorf("openai: parse structured json: %w", err)
-	}
-
-	if err := validateSchema(call.OutputSchemaRef, payload); err != nil {
-		return nil, aiwf.Tokens{}, err
-	}
-
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return nil, aiwf.Tokens{}, err
-	}
+	// Return raw JSON bytes
+	raw := []byte(structuredText)
 
 	usage := aiwf.Tokens{
 		Prompt:     parsed.Usage.PromptTokens,
@@ -140,7 +131,7 @@ func (c *Client) newRequest(ctx context.Context, call aiwf.ModelCall) (*http.Req
 		return nil, err
 	}
 
-	format, err := buildJSONSchemaFormat(call)
+	format, err := c.buildJSONSchemaFormat(call)
 	if err != nil {
 		return nil, err
 	}
@@ -173,13 +164,6 @@ func (c *Client) newRequest(ctx context.Context, call aiwf.ModelCall) (*http.Req
 	return req, nil
 }
 
-// validateSchema пока что выполняет заглушку, заменяем настоящей валидацией после интеграции с runtime validate.
-func validateSchema(schemaRef string, data any) error {
-	if schemaRef == "" {
-		return errors.New("openai: schema reference is required")
-	}
-	return nil
-}
 
 type requestPayload struct {
 	Model           string         `json:"model"`
@@ -195,15 +179,14 @@ type textSection struct {
 }
 
 type textFormat struct {
-	Type       string         `json:"type"`
-	Name       string         `json:"name"`
-	JSONSchema textJSONSchema `json:"json_schema"`
+	Type       string          `json:"type"`
+	JSONSchema *jsonSchemaSpec `json:"json_schema,omitempty"`
 }
 
-type textJSONSchema struct {
+type jsonSchemaSpec struct {
 	Name   string          `json:"name"`
-	Strict bool            `json:"strict"`
 	Schema json.RawMessage `json:"schema"`
+	Strict bool            `json:"strict,omitempty"`
 }
 
 type inputMessage struct {
@@ -278,20 +261,41 @@ func buildInputMessages(call aiwf.ModelCall) ([]inputMessage, error) {
 	return messages, nil
 }
 
-func buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
-	if len(call.OutputSchema) == 0 {
-		return textSection{}, errors.New("openai: output schema is required")
+func (c *Client) buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
+	if call.OutputTypeName == "" {
+		return textSection{}, errors.New("openai: output type name is required")
 	}
 
-	name := schemaFormatName(call.OutputSchemaRef)
+	// Convert type metadata to JSON Schema
+	var schema json.RawMessage
+	var err error
+
+	if call.TypeMetadata != nil {
+		schema, err = c.converter.ConvertTypeMetadata(call.TypeMetadata)
+		if err != nil {
+			return textSection{}, fmt.Errorf("openai: failed to convert type metadata: %w", err)
+		}
+	} else {
+		// If no metadata provided, create a minimal schema
+		minimalSchema := map[string]any{
+			"type": "object",
+			"additionalProperties": true,
+		}
+		schema, err = json.Marshal(minimalSchema)
+		if err != nil {
+			return textSection{}, fmt.Errorf("openai: failed to create minimal schema: %w", err)
+		}
+	}
+
+	name := schemaFormatName(call.OutputTypeName)
 
 	return textSection{
 		Format: textFormat{
 			Type: "json_schema",
-			JSONSchema: textJSONSchema{
+			JSONSchema: &jsonSchemaSpec{
 				Name:   name,
+				Schema: schema,
 				Strict: true,
-				Schema: call.OutputSchema,
 			},
 		},
 	}, nil

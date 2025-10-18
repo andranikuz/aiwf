@@ -1,0 +1,144 @@
+version: 0.3-proposal
+# Многоэтапная обработка данных
+
+workflows:
+  data_processor:
+    input_type: RawData
+    output_type: ProcessedReport
+
+    steps:
+      - name: validation
+        agent: validator
+        input_type: RawData
+        output_type: ValidatedData
+
+      - name: cleaning
+        agent: cleaner
+        depends_on: [validation]
+        input_binding:
+          data: "{{validation.output}}"
+        input_type: ValidatedData
+        output_type: CleanData
+
+      - name: analysis
+        agent: analyst
+        depends_on: [cleaning]
+        input_binding:
+          clean_data: "{{cleaning.output}}"
+          analysis_config: "{{input.config}}"
+        input_type: AnalysisInput
+        output_type: AnalysisResult
+
+      - name: reporting
+        agent: reporter
+        depends_on: [analysis]
+        input_binding:
+          analysis: "{{analysis.output}}"
+          format: "{{input.report_format}}"
+        input_type: ReportInput
+        output_type: ProcessedReport
+
+assistants:
+  validator:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: Validate data quality and completeness
+    input_type: RawData
+    output_type: ValidatedData
+
+  cleaner:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: Clean and normalize data
+    input_type: ValidatedData
+    output_type: CleanData
+
+  analyst:
+    use: openai
+    model: gpt-4o
+    system_prompt: Perform deep data analysis
+    input_type: AnalysisInput
+    output_type: AnalysisResult
+
+  reporter:
+    use: openai
+    model: gpt-4o
+    system_prompt: Generate comprehensive reports
+    input_type: ReportInput
+    output_type: ProcessedReport
+
+types:
+  RawData:
+    source: string
+    format: enum(csv, json, xml, excel)
+    content: string
+    size_bytes: int
+    config: $ProcessingConfig
+    report_format: enum(pdf, html, json, markdown)
+
+  ProcessingConfig:
+    remove_duplicates: bool
+    handle_nulls: enum(skip, fill, error)
+    validation_rules: string[]
+
+  ValidatedData:
+    data: string
+    validation_report: $ValidationReport
+    is_valid: bool
+
+  ValidationReport:
+    total_records: int
+    valid_records: int
+    errors: $ValidationError[]
+
+  ValidationError:
+    row: int
+    field: string
+    error: string
+
+  CleanData:
+    data: string
+    cleaning_report: $CleaningReport
+
+  CleaningReport:
+    records_processed: int
+    duplicates_removed: int
+    nulls_handled: int
+    transformations: string[]
+
+  AnalysisInput:
+    clean_data: $CleanData
+    analysis_config: $ProcessingConfig
+
+  AnalysisResult:
+    statistics: $Statistics
+    patterns: $Pattern[]
+    anomalies: $Anomaly[]
+    insights: string[]
+
+  Statistics:
+    mean: number
+    median: number
+    std_dev: number
+    min: number
+    max: number
+
+  Pattern:
+    name: string
+    frequency: int
+    confidence: number(0..1)
+
+  Anomaly:
+    type: string
+    severity: enum(low, medium, high)
+    description: string
+
+  ReportInput:
+    analysis: $AnalysisResult
+    format: enum(pdf, html, json, markdown)
+
+  ProcessedReport:
+    format: string
+    content: string
+    summary: string
+    generated_at: datetime

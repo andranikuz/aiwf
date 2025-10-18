@@ -1,0 +1,58 @@
+version: 0.3-proposal
+# Диалоговая система поддержки клиентов
+
+assistants:
+  support_bot:
+    use: openai
+    model: gpt-4o
+    dialog:
+      max_rounds: 10
+    system_prompt: |
+      You are a helpful customer support agent.
+      Understand customer issues and provide solutions.
+      Escalate complex problems when needed.
+    input_type: SupportMessage
+    output_type: SupportResponse
+
+types:
+  SupportMessage:
+    customer_id: uuid
+    message: string(1..2000)
+    context: $ConversationContext
+    attachments: $Attachment[]
+
+  ConversationContext:
+    session_id: uuid
+    ticket_id: uuid
+    previous_messages: $Message[](max:10)
+    customer_info: $Customer
+
+  Customer:
+    id: uuid
+    name: string
+    email: string(email)
+    subscription_tier: enum(free, basic, pro, enterprise)
+    account_created: datetime
+
+  Message:
+    id: uuid
+    sender_type: enum(customer, agent, system)
+    content: string
+    timestamp: datetime
+
+  Attachment:
+    filename: string
+    mime_type: string
+    size_bytes: int
+    url: string(url)
+
+  SupportResponse:
+    message: string(1..3000)
+    actions: $Action[]
+    escalate: bool
+    resolution_status: enum(pending, resolved, escalated)
+
+  Action:
+    type: enum(open_ticket, send_email, schedule_call, show_article)
+    label: string
+    data: map(string, any)

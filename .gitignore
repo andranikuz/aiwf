@@ -3,3 +3,19 @@
 .DS_Store
 examples/blog/config/prompts/outline.md
 /examples/blog/config
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Generated SDK outputs from tests
+examples/*/sdk_test/
+test_outputs/
+
+# Test coverage
+*.out
+coverage.txt
+coverage.html
+.env
+.env

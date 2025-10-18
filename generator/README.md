@@ -1,92 +1,183 @@
-# Генератор SDK AIWF
+# Generator - Генератор SDK
 
-Папка `generator/` содержит пайплайн превращения YAML-спецификации AIWF в типизированный SDK.
+Генератор преобразует YAML-спецификации в типобезопасный код для различных языков программирования.
 
 ## Архитектура
 
 ```
-YAML ──LoadSpec──▶ Spec ──BuildIR──▶ IR ──backend──▶ SDK
+YAML ──LoadSpec──▶ Spec ──ResolveTypes──▶ BuildIR ──▶ IR ──backend──▶ SDK
 ```
 
-- `core/spec.go` — структуры YAML (`Spec`, `Assistants`, `Workflows`, `Threads`).
-- `core/loader.go` — `LoadSpec`: чтение YAML, импорты типов (`imports`), валидация `threads`, диалоговых настроек, approval, проверка JSON Schema.
-- `core/ir.go` — `BuildIR`: нормализация данных, подготовка реестра типов, тредов, approval для backend’а.
-- `backend-go/` — генерация Go-кода (`service.go`, `agents.go`, `workflows.go`, `dialog.go`, `contracts.go`). TS/Py backend’ы в работе.
+- `core/spec.go` — структуры YAML-спецификации
+- `core/typedef.go` — система типов и парсер выражений
+- `core/resolution.go` — резолюция типов и ссылок
+- `core/ir.go` — построение промежуточного представления (IR)
+- `backend-go/` — генератор Go-кода
 
-## YAML-спецификация
+## YAML Спецификация
 
-Пример набора блоков:
+### Структура файла
 
 ```yaml
-version: 0.3
-imports:
-  - as: common
-    path: ./common.types.yaml
-threads:
-  default:
-    provider: openai_responses
-    strategy: append
-    ttl_hours: 24
+# Определения типов
+types:
+  TypeName:
+    field1: type_expression
+    field2: type_expression
+
+# Ассистенты (агенты)
 assistants:
-  premise:
-    model: gpt-4.1-mini
-    system_prompt: "..."
-    output_schema_ref: "aiwf://book/PremiseOutput"
-    thread: { use: default }
-    dialog: { max_rounds: 3 }
+  assistant_name:
+    model: string           # Модель LLM (gpt-4o, claude-3, etc.)
+    system_prompt: string   # Системный промпт
+    input_type: TypeName    # Тип входных данных
+    output_type: TypeName   # Тип выходных данных
+    thread:                 # Опционально: конфигурация треда
+      use: thread_name
+      strategy: string
+    dialog:                 # Опционально: диалоговый режим
+      max_rounds: int
+
+# Воркфлоу
 workflows:
-  novel:
-    thread: { use: default }
-    dag:
-      - step: premise
-        assistant: premise
-        approval:
-          review:
-            prompt: "Проверь целостность"
-            properties:
-              "logline": { prompt: "≤160" }
-          on_reject: { action: continue_dialog }
-        next:
-          step: outline
-          input_binding:
-            premise: "{{ .premise }}"
-          input_contract_ref: "aiwf://book/OutlineInput"
+  workflow_name:
+    steps:
+      - name: step_name
+        assistant: assistant_name
+        needs: [previous_step]
+
+# Треды
+threads:
+  thread_name:
+    provider: openai
+    strategy: new|continue|append
 ```
 
-Ключевые блоки:
+## Система типов
 
-- `imports` — YAML с `types:` и `$id`, формирующие `aiwf://`-ссылки.
-- `threads` — политики тредов (`provider`, `strategy`, `ttl_hours`, `metadata`).
-- `assistants` — модели, промпты, ссылки на схемы, диалоговые настройки.
-- `workflows` — DAG шагов, `thread`/`dialog`, `approval` (действия: `continue`, `retry`, `continue_dialog`, `goto`, `stop`).
+### Базовые типы
 
-## Генерация Go SDK
+- `string` - Строка
+- `int` - Целое число
+- `number` - Число с плавающей точкой
+- `bool` - Булево значение
+- `any` - Любой тип
+- `datetime`, `date`, `uuid` - Специальные типы
+
+### Выражения типов
+
+#### Строки с ограничениями
+```yaml
+username: string(1..100)    # Длина от 1 до 100
+password: string(10..)       # Минимум 10 символов
+bio: string(..500)          # Максимум 500 символов
+```
+
+#### Числа с диапазонами
+```yaml
+age: int(0..150)            # Целое от 0 до 150
+confidence: number(0..1)     # Число от 0.0 до 1.0
+count: int(0..)             # От 0 без верхней границы
+```
+
+#### Перечисления
+```yaml
+status: enum(active, inactive, pending)
+```
+
+#### Массивы
+```yaml
+tags: string[]              # Массив строк
+users: User[]               # Массив объектов
+```
+
+#### Словари
+```yaml
+metadata: map(string, any)   # Словарь с любыми значениями
+scores: map(string, number)  # Словарь чисел
+```
+
+#### Ссылки на типы
+```yaml
+author: User                 # Ссылка на другой тип
+manager: $User              # Альтернативный синтаксис
+```
+
+### Примеры типов
+
+```yaml
+types:
+  # Простой объект
+  User:
+    id: uuid
+    name: string(1..50)
+    email: string
+    age: int(0..150)
+    role: enum(admin, user, guest)
+
+  # Составной тип
+  Article:
+    title: string(1..200)
+    content: string(10..10000)
+    author: User
+    tags: string[]
+    metadata: map(string, any)
+    status: enum(draft, published)
+    published_at: datetime
+```
+
+## Генерация Go-кода
+
+### Генерируемые файлы
+
+1. **types.go** - Структуры и валидаторы
+```go
+type User struct {
+    ID    string `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+    Age   int    `json:"age"`
+    Role  string `json:"role"`
+}
+
+func ValidateUser(u *User) error {
+    // Валидация ограничений
+}
+```
+
+2. **agents.go** - Типизированные агенты
+```go
+func (a *TranslatorAgent) Run(ctx context.Context, input TranslationRequest) (*TranslationResult, *aiwf.Trace, error) {
+    // Реализация
+}
+```
+
+3. **service.go** - Сервис с агентами
+```go
+type Service struct {
+    Agents *Agents
+}
+```
+
+## Использование CLI
 
 ```bash
-aiwf sdk \
-  --file examples/book/sdk.yaml \
-  --out examples/book/sdk \
-  --package book
+# Валидация
+aiwf validate -f config.yaml
+
+# Генерация SDK
+aiwf sdk -f config.yaml -o ./generated --package myapp
 ```
 
-Результат:
+## Текущие ограничения
 
-- `service.go` — фабрика `NewService`, методы настройки `WithThreadManager`, `WithDialogDecider`, `WithMaxDialogRounds`.
-- `agents.go` — агенты принимают/возвращают `*aiwf.ThreadState`.
-- `workflows.go` — пошаговый раннер с диалоговым циклом (вызовы агента → решение `DialogDecider`).
-- `dialog.go` — вспомогательные типы и опции выполнения.
-- `contracts.go` — структуры и enum-константы из схем.
+- Валидация ограничений пока не генерируется полностью
+- Workflows требуют доработки под новую систему типов
+- Опциональные поля пока не поддерживаются
 
-## Тесты
+## Roadmap
 
-```bash
-unset GOROOT && export GOTOOLCHAIN=local
-UPDATE_GOLDEN=1 go test ./generator/backend-go
-```
-
-- `generator/backend-go/generator_test.go` — снапшотные тесты (папка `testdata/`).
-- Для IR/loader — `go test ./generator/core`.
-
-## Поддержка диалогов
-
-IR хранит `Threads` и `Dialog` настройки, Go backend использует их для генерации run-опций и thread-binding. README по диалогам и YAML см. `docs/dialog-workflows.md`.
+- [ ] Полная генерация валидаторов
+- [ ] Поддержка workflows
+- [ ] Опциональные поля
+- [ ] Python/TypeScript генераторы

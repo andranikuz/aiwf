@@ -1,0 +1,56 @@
+version: 0.3-proposal
+# Бот для проведения интервью
+
+assistants:
+  interviewer:
+    use: openai
+    model: gpt-4o
+    dialog:
+      max_rounds: 15
+    system_prompt: |
+      Conduct structured interviews based on the interview template.
+      Ask follow-up questions when needed.
+      Maintain professional and engaging tone.
+      Summarize key points at the end.
+    input_type: InterviewInput
+    output_type: InterviewOutput
+
+types:
+  InterviewInput:
+    candidate_response: string
+    interview_state: $InterviewState
+
+  InterviewState:
+    session_id: uuid
+    interview_type: enum(technical, behavioral, cultural_fit, screening)
+    current_question_index: int
+    questions_asked: $Question[]
+    candidate_profile: $CandidateProfile
+    time_elapsed_minutes: int
+
+  CandidateProfile:
+    name: string
+    email: string(email)
+    position_applied: string
+    experience_years: int
+    resume_highlights: string[]
+
+  Question:
+    id: string
+    text: string
+    category: string
+    difficulty: enum(easy, medium, hard)
+    expected_topics: string[]
+
+  InterviewOutput:
+    next_question: string
+    follow_up_needed: bool
+    assessment: $Assessment
+    interview_complete: bool
+
+  Assessment:
+    current_score: number(0..100)
+    strengths: string[]
+    areas_for_improvement: string[]
+    red_flags: string[]
+    recommendation: enum(strong_yes, yes, maybe, no)

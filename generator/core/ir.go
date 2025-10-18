@@ -4,27 +4,25 @@ import "fmt"
 
 // IR описывает нормализованный набор ассистентов и воркфлоу.
 type IR struct {
-    Assistants   map[string]IRAssistant
-    Workflows    map[string]IRWorkflow
-    Threads      map[string]ThreadSpec
-    TypeRegistry map[string][]byte
+    Assistants map[string]IRAssistant
+    Workflows  map[string]IRWorkflow
+    Threads    map[string]ThreadSpec
+    Types      *TypeRegistry
 }
 
 // IRAssistant содержит сведения для генерации SDK.
 type IRAssistant struct {
-    Name             string
-    Model            string
-    SystemPrompt     string
-    Use              string
-	InputSchemaPath  string
-	OutputSchemaPath string
-	InputSchemaData  []byte
-	OutputSchemaData []byte
-    DependsOn        []string
-    InputSchemaRef   string
-    OutputSchemaRef  string
-    Thread           *ThreadBindingSpec
-    Dialog           *DialogSpec
+    Name           string
+    Model          string
+    SystemPrompt   string
+    Use            string
+    InputTypeName  string
+    OutputTypeName string
+    InputType      *TypeDef
+    OutputType     *TypeDef
+    DependsOn      []string
+    Thread         *ThreadBindingSpec
+    Dialog         *DialogSpec
 }
 
 // IRWorkflow описывает workflow и его шаги.
@@ -54,35 +52,38 @@ func BuildIR(spec *Spec) (*IR, error) {
 		return nil, fmt.Errorf("core: spec is nil")
 	}
 
+	// Resolve types first
+	if err := ResolveSpec(spec); err != nil {
+		return nil, fmt.Errorf("failed to resolve spec: %w", err)
+	}
+
     ir := &IR{
-        Assistants:   make(map[string]IRAssistant, len(spec.Assistants)),
-        Workflows:    make(map[string]IRWorkflow, len(spec.Workflows)),
-        Threads:      make(map[string]ThreadSpec, len(spec.Threads)),
-        TypeRegistry: make(map[string][]byte, len(spec.Resolved.TypeRegistry)),
+        Assistants: make(map[string]IRAssistant, len(spec.Assistants)),
+        Workflows:  make(map[string]IRWorkflow, len(spec.Workflows)),
+        Threads:    make(map[string]ThreadSpec, len(spec.Threads)),
+        Types:      spec.Resolved.TypeRegistry,
     }
 
 	merr := &MultiError{}
 
 	for name, as := range spec.Assistants {
-		if as.Resolved.OutputSchema == nil && as.Resolved.OutputSchemaPath == "" {
-			merr.Append(&ValidationError{Field: fmt.Sprintf("assistants.%s.output_schema_ref", name), Msg: "schema path не вычислен"})
+		if as.OutputType == "" {
+			merr.Append(&ValidationError{Field: fmt.Sprintf("assistants.%s.output_type", name), Msg: "output type не указан"})
 			continue
 		}
 
         assistant := IRAssistant{
-            Name:             name,
-            Model:            as.Model,
-            SystemPrompt:     as.SystemPrompt,
-            Use:              as.Use,
-            InputSchemaPath:  as.Resolved.InputSchemaPath,
-            OutputSchemaPath: as.Resolved.OutputSchemaPath,
-            InputSchemaData:  schemaData(as.Resolved.InputSchema),
-            OutputSchemaData: schemaData(as.Resolved.OutputSchema),
-            DependsOn:        cloneSlice(as.DependsOn),
-            InputSchemaRef:   as.InputSchemaRef,
-            OutputSchemaRef:  as.OutputSchemaRef,
-            Thread:           cloneThreadBinding(as.Thread),
-            Dialog:           cloneDialog(as.Dialog),
+            Name:           name,
+            Model:          as.Model,
+            SystemPrompt:   as.SystemPrompt,
+            Use:            as.Use,
+            InputTypeName:  as.InputType,
+            OutputTypeName: as.OutputType,
+            InputType:      as.Resolved.InputType,
+            OutputType:     as.Resolved.OutputType,
+            DependsOn:      cloneSlice(as.DependsOn),
+            Thread:         cloneThreadBinding(as.Thread),
+            Dialog:         cloneDialog(as.Dialog),
         }
         ir.Assistants[name] = assistant
 	}
@@ -173,14 +174,6 @@ func BuildIR(spec *Spec) (*IR, error) {
 		}
 	}
 
-	for id, doc := range spec.Resolved.TypeRegistry {
-		if doc == nil || len(doc.Data) == 0 {
-			continue
-		}
-		copyData := make([]byte, len(doc.Data))
-		copy(copyData, doc.Data)
-		ir.TypeRegistry[id] = copyData
-	}
 
 	if merr.HasErrors() {
 		return nil, merr
@@ -202,17 +195,6 @@ func cloneSlice(in []string) []string {
 	return out
 }
 
-func schemaData(doc *SchemaDocument) []byte {
-	if doc == nil {
-		return nil
-	}
-	if len(doc.Data) == 0 {
-		return nil
-	}
-	out := make([]byte, len(doc.Data))
-	copy(out, doc.Data)
-	return out
-}
 
 func cloneMap(in map[string]any) map[string]any {
 	if len(in) == 0 {

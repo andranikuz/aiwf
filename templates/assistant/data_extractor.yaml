@@ -1,0 +1,35 @@
+version: 0.3-proposal
+# Простой ассистент для извлечения данных
+
+assistants:
+  data_extractor:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: |
+      Extract structured information from text.
+      Return only explicitly stated facts.
+    input_type: ExtractRequest
+    output_type: ExtractedData
+
+types:
+  ExtractRequest:
+    text: string(1..10000)
+    extraction_mode: enum(entities, relationships, full)
+
+  Entity:
+    type: enum(person, organization, location, date, amount)
+    value: string(1..500)
+    confidence: number(0..1)
+
+  Relationship:
+    subject: string
+    predicate: string
+    object: string
+
+  ExtractedData:
+    entities: $Entity[]
+    relationships: $Relationship[]
+    metadata:
+      extraction_timestamp: datetime
+      source_length: int
+      detected_language: string

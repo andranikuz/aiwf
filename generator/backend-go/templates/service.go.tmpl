@@ -50,13 +50,22 @@ func (s *service) WithMaxDialogRounds(n int) Service {
 func (s *service) Agents() Agents { return &agents{client: s.client} }
 
 func (s *service) Workflows() Workflows {
+{{- if .HasWorkflows }}
     return &workflows{
         client:          s.client,
         threads:         s.threadManager,
         dialogDecider:   s.dialogDecider,
         maxDialogRounds: s.maxDialogRounds,
     }
+{{- else }}
+    return nil
+{{- end }}
 }
+
+{{- if not .HasWorkflows }}
+
+type Workflows interface{}
+{{- end }}
 
 func mergeTrace(base, next *aiwf.Trace) *aiwf.Trace {
     if base == nil {

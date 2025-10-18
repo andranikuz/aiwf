@@ -66,13 +66,18 @@ func TestCallJSONSchemaSuccess(t *testing.T) {
 	}
 
 	call := aiwf.ModelCall{
-		Model:           "gpt-4.1-mini",
-		OutputSchemaRef: "answer_schema",
-		UserPrompt:      "What is the answer?",
-		SystemPrompt:    "You are a helpful assistant",
-		OutputSchema:    json.RawMessage(`{"type":"object","properties":{"answer":{"type":"string"}}}`),
-		MaxTokens:       128,
-		Temperature:     0.7,
+		Model:          "gpt-4.1-mini",
+		OutputTypeName: "answer_schema",
+		UserPrompt:     "What is the answer?",
+		SystemPrompt:   "You are a helpful assistant",
+		TypeMetadata: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"answer": map[string]any{"type": "string"},
+			},
+		},
+		MaxTokens:   128,
+		Temperature: 0.7,
 	}
 
 	raw, usage, err := client.CallJSONSchema(context.Background(), call)
@@ -125,7 +130,10 @@ func TestCallJSONSchemaSuccess(t *testing.T) {
 	if format["type"] != "json_schema" {
 		t.Fatalf("unexpected format type: %v", format["type"])
 	}
-	jsonSchema, _ := format["json_schema"].(map[string]any)
+	jsonSchema, ok := format["json_schema"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected json_schema map, got %T", format["json_schema"])
+	}
 	if jsonSchema["strict"] != true {
 		t.Fatalf("expected strict json schema, got %v", jsonSchema["strict"])
 	}
@@ -167,7 +175,7 @@ func TestCallJSONSchemaRequiresSchema(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing schema ref")
 	}
-	if !strings.Contains(err.Error(), "output schema") {
+	if !strings.Contains(err.Error(), "output type") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

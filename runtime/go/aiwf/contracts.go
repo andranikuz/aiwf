@@ -2,7 +2,6 @@ package aiwf
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 )
 
@@ -22,20 +21,22 @@ type Trace struct {
 	ArtifactID string
 }
 
-// ModelCall описывает запрос к LLM c привязкой к JSON Schema.
+// ModelCall описывает запрос к LLM.
 type ModelCall struct {
-	Model           string
-	InputSchemaRef  string
-	OutputSchemaRef string
-	OutputSchema    json.RawMessage
-	SystemPrompt    string
-	UserPrompt      string
-	MaxTokens       int
-	Temperature     float64
-	Stream          bool
-	Payload         any
-	ThreadID        string
-	ThreadMetadata  map[string]any
+	Model          string
+	SystemPrompt   string
+	UserPrompt     string
+	MaxTokens      int
+	Temperature    float64
+	Stream         bool
+	Payload        any // Входные данные (уже типизированные)
+	ThreadID       string
+	ThreadMetadata map[string]any
+
+	// Метаданные типов для провайдера
+	InputTypeName  string // Имя входного типа
+	OutputTypeName string // Имя выходного типа
+	TypeMetadata   any    // Опциональные метаданные типа (например, TypeDef для провайдера)
 }
 
 // StreamChunk описывает инкрементальные ответы модели при потоковой генерации.
@@ -89,4 +90,20 @@ type ThreadManager interface {
 	Start(ctx context.Context, assistant string, binding ThreadBinding) (*ThreadState, error)
 	Continue(ctx context.Context, state *ThreadState, feedback string) error
 	Close(ctx context.Context, state *ThreadState) error
+}
+
+// TypeProvider предоставляет метаданные типов для провайдеров.
+// SDK реализует этот интерфейс для экспорта информации о типах.
+type TypeProvider interface {
+	GetTypeMetadata(typeName string) (any, error)
+	GetInputTypeFor(agentName string) (string, any, error)
+	GetOutputTypeFor(agentName string) (string, any, error)
+}
+
+// Agent описывает базовый интерфейс агента.
+// Конкретные агенты в SDK будут иметь типизированные методы.
+type Agent interface {
+	Name() string
+	Model() string
+	SystemPrompt() string
 }

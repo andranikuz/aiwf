@@ -1,51 +1,55 @@
-# Рантайм AIWF
+# Runtime
 
-`runtime/` содержит контракты и утилиты, необходимые для исполнения сгенерированных воркфлоу.
+Runtime-библиотеки для выполнения сгенерированного SDK.
 
-## Основные пакеты
+## Go Runtime (`runtime/go/aiwf`)
 
-- `runtime/go/aiwf`
-  - `ModelClient` — интерфейс LLM-клиента (`CallJSONSchema`, `CallJSONSchemaStream`).
-  - `ThreadState`, `ThreadBinding`, `ThreadManager` — новая подсистема для управления диалоговыми тредами.
-  - `DialogAction`, `DialogDecider`, `DefaultDialogDecider`, `NoopThreadManager` — механика диалогов.
-  - `Workflow` — базовый интерфейс для раннеров (сгенерированный SDK его реализует).
-  - `Tokens`, `Trace`, `ArtifactStore` — контракты наблюдаемости и артефактов.
-- `runtime/go/aiwf/store` — реализации `ArtifactStore` (filesystem, s3).
+### Основные интерфейсы
 
-## Диалоговые воркфлоу
+- **`ModelClient`** - интерфейс для вызова LLM
+  - `CallJSONSchema` - синхронный вызов с JSON Schema
+  - `CallJSONSchemaStream` - потоковый вызов (в разработке)
 
-- `ThreadManager` управляет `ThreadState` между вызовами агента (создание/продолжение/закрытие).
-- `DialogDecider` решает, повторять ли шаг (`DialogActionRetry`), переходить к другому (`DialogActionGoto`), завершать.
-- По умолчанию используется `NoopThreadManager` и `DefaultDialogDecider`, работающие как single-shot.
+- **`ThreadManager`** - управление состоянием диалогов
+  - `Start` - начало нового треда
+  - `Continue` - продолжение с обратной связью
+  - `Close` - завершение треда
 
-## Реализация провайдеров
+- **`ArtifactStore`** - хранение промежуточных результатов
+  - Реализации: filesystem, S3
 
-- Провайдеры должны поддерживать `ThreadState` (например, OpenAI Responses API использует `thread_id`).
-- При `DialogActionRetry` генератор вызывает `ThreadManager.Continue` с текстом feedback.
+- **`TypeProvider`** - предоставление метаданных типов для провайдеров
 
-## Пример использования
+- **`AgentBase`** - базовая реализация агента с CallModel
 
-Сгенерированный SDK (например, `examples/blog/sdk`) вызывает агента примерно так:
+### Использование
 
 ```go
-state, _ := threadManager.Start(ctx, "premise", aiwf.ThreadBinding{Name: "default", Provider: "openai_responses"})
-output, state, trace, err := service.Agents().Premise().Run(ctx, input, state)
+import "github.com/andranikuz/aiwf/runtime/go/aiwf"
+
+// Создание клиента провайдера
+client := openai.NewClient(config)
+
+// Создание сервиса SDK
+service := sdk.NewService(client)
+    .WithThreadManager(threadManager)
+    .WithArtifactStore(store)
+
+// Вызов агента
+result, trace, err := service.Agents().DataExtractor.Run(ctx, input)
 ```
 
-Пользователь может передать свой менеджер тредов:
+### Контракты
 
-```go
-svc := blog.NewService(client).
-    WithThreadManager(myThreads).
-    WithDialogDecider(myDecider).
-    WithMaxDialogRounds(3)
-```
+- **`ModelCall`** - структура запроса к LLM
+- **`Tokens`** - метрики использования токенов
+- **`Trace`** - трассировка выполнения
+- **`ThreadState`** - состояние диалогового треда
 
-## Тестирование
+## Roadmap
 
-```bash
-unset GOROOT && export GOTOOLCHAIN=local
-go test ./runtime/...
-```
-
-`runtime/go/aiwf/dialog.go` и `runtime/go/aiwf/contracts.go` — отправные точки для расширения собственного рантайма.
+- [ ] Python runtime
+- [ ] TypeScript runtime
+- [ ] Полная поддержка стриминга
+- [ ] Batch операции
+- [ ] Middleware система

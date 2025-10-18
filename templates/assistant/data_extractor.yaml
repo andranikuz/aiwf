@@ -12,10 +12,6 @@ assistants:
     output_type: ExtractedData
 
 types:
-  ExtractRequest:
-    text: string(1..10000)
-    extraction_mode: enum(entities, relationships, full)
-
   Entity:
     type: enum(person, organization, location, date, amount)
     value: string(1..500)
@@ -25,6 +21,10 @@ types:
     subject: string
     predicate: string
     object: string
+
+  ExtractRequest:
+    text: string(1..10000)
+    extraction_mode: enum(entities, relationships, full)
 
   ExtractedData:
     entities: $Entity[]

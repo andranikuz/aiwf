@@ -12,11 +12,6 @@ assistants:
     output_type: AnalysisResult
 
 types:
-  CodeAnalysisRequest:
-    code: string(1..50000)
-    language: enum(python, javascript, typescript, go, java, rust)
-    analysis_focus: enum(security, performance, maintainability, all)
-
   Issue:
     severity: enum(critical, high, medium, low)
     type: enum(bug, vulnerability, performance, style)
@@ -28,6 +23,11 @@ types:
     name: string
     value: number
     unit: string
+
+  CodeAnalysisRequest:
+    code: string(1..50000)
+    language: enum(python, javascript, typescript, go, java, rust)
+    analysis_focus: enum(security, performance, maintainability, all)
 
   AnalysisResult:
     issues: $Issue[]

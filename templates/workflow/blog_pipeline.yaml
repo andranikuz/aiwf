@@ -83,57 +83,62 @@ assistants:
     output_type: PublishedPost
 
 types:
-  BlogRequest:
-    topic: string(1..200)
-    keywords: string[](1..10)
-    target_audience: string
-    word_count_target: int(500..5000)
-    style_guide: $StyleGuide
+  User:
+    id: uuid
+    email: string(email)
+    name: string(1..100)
 
   StyleGuide:
     tone: enum(formal, casual, technical, conversational)
     voice: enum(active, passive)
     perspective: enum(first, second, third)
 
-  ResearchInput:
-    topic: string
-    depth: enum(basic, detailed, comprehensive)
+  Source:
+    title: string
+    url: string(url)
+    credibility: number(0..1)
 
   ResearchOutput:
     key_points: string[]
     sources: $Source[]
     summary: string(100..2000)
 
-  Source:
+  Section:
+    id: string
     title: string
-    url: string(url)
-    credibility: number(0..1)
-
-  OutlineInput:
-    topic: string
-    research_data: $ResearchOutput
+    points: string[]
 
   BlogOutline:
     title: string
     sections: $Section[]
     estimated_words: int
 
-  Section:
-    id: string
-    title: string
-    points: string[]
-
-  WritingInput:
-    outline: $BlogOutline
-    style_guide: $StyleGuide
-
   Draft:
     title: string
     content: string
     word_count: int
 
+  ResearchInput:
+    topic: string
+    depth: enum(basic, detailed, comprehensive)
+
+  OutlineInput:
+    topic: string
+    research_data: $ResearchOutput
+
+  WritingInput:
+    outline: $BlogOutline
+    style_guide: $StyleGuide
+
   EditInput:
     draft: $Draft
+
+  PostMetadata:
+    author: $User
+    published_at: datetime
+    tags: string[]
+    word_count: int
+    reading_time_minutes: int
 
   PublishedPost:
     title: string
@@ -141,9 +146,9 @@ types:
     excerpt: string(50..300)
     metadata: $PostMetadata
 
-  PostMetadata:
-    author: $shared.User
-    published_at: datetime
-    tags: string[]
-    word_count: int
-    reading_time_minutes: int
+  BlogRequest:
+    topic: string(1..200)
+    keywords: string[](1..10)
+    target_audience: string
+    word_count_target: int(500..5000)
+    style_guide: $StyleGuide

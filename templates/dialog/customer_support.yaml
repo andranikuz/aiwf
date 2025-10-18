@@ -15,18 +15,6 @@ assistants:
     output_type: SupportResponse
 
 types:
-  SupportMessage:
-    customer_id: uuid
-    message: string(1..2000)
-    context: $ConversationContext
-    attachments: $Attachment[]
-
-  ConversationContext:
-    session_id: uuid
-    ticket_id: uuid
-    previous_messages: $Message[](max:10)
-    customer_info: $Customer
-
   Customer:
     id: uuid
     name: string
@@ -46,13 +34,25 @@ types:
     size_bytes: int
     url: string(url)
 
-  SupportResponse:
-    message: string(1..3000)
-    actions: $Action[]
-    escalate: bool
-    resolution_status: enum(pending, resolved, escalated)
+  ConversationContext:
+    session_id: uuid
+    ticket_id: uuid
+    previous_messages: $Message[](max:10)
+    customer_info: $Customer
 
   Action:
     type: enum(open_ticket, send_email, schedule_call, show_article)
     label: string
     data: map(string, any)
+
+  SupportMessage:
+    customer_id: uuid
+    message: string(1..2000)
+    context: $ConversationContext
+    attachments: $Attachment[]
+
+  SupportResponse:
+    message: string(1..3000)
+    actions: $Action[]
+    escalate: bool
+    resolution_status: enum(pending, resolved, escalated)

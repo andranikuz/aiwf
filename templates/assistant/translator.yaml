@@ -13,6 +13,17 @@ assistants:
     output_type: TranslationResult
 
 types:
+  Alternative:
+    text: string
+    context: string
+    preference_score: number(0..1)
+
+  TranslationNote:
+    type: enum(cultural_adaptation, idiom, technical_term, ambiguity)
+    original_phrase: string
+    translated_phrase: string
+    explanation: string
+
   TranslationRequest:
     text: string(1..10000)
     source_language: string(2)  # ISO 639-1 code
@@ -25,14 +36,3 @@ types:
     confidence_score: number(0..1)
     alternatives: $Alternative[]
     notes: $TranslationNote[]
-
-  Alternative:
-    text: string
-    context: string
-    preference_score: number(0..1)
-
-  TranslationNote:
-    type: enum(cultural_adaptation, idiom, technical_term, ambiguity)
-    original_phrase: string
-    translated_phrase: string
-    explanation: string

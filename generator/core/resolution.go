@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 )
 
 // ResolveSpec resolves all types and references in a spec
@@ -83,10 +84,10 @@ func resolveTypeRefs(td *TypeDef, registry *TypeRegistry) error {
 	switch td.Kind {
 	case KindRef:
 		// Validate that reference exists
-		refName := td.Ref
+		refName := strings.TrimPrefix(td.Ref, "$")
 		if refName != "" {
 			if _, ok := registry.Types[refName]; !ok {
-				return fmt.Errorf("reference to undefined type: %s", refName)
+				return fmt.Errorf("reference to undefined type: %s", td.Ref)
 			}
 		}
 

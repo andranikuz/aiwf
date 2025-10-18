@@ -2,10 +2,6 @@
 
 package data_extractor_sdk
 
-import (
-	"time"
-)
-
 // Entity represents Entity
 type Entity struct {
 	Type string `json:"type"`

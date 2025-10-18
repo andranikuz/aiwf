@@ -19,11 +19,15 @@ func init() {
 	}
 
 	// Initialize OpenAI client
-	config := openai.Config{
+	config := openai.ClientConfig{
 		APIKey:  apiKey,
 		BaseURL: "https://api.openai.com/v1",
 	}
-	openaiClient = openai.NewClient(config)
+	var err error
+	openaiClient, err = openai.NewClient(config)
+	if err != nil {
+		panic("failed to create OpenAI client: " + err.Error())
+	}
 }
 
 // Helper function to skip tests if API key is not available

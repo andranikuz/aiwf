@@ -2,11 +2,10 @@ package assistants
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/assistants/generated/data_extractor"
+	data_extractor "github.com/andranikuz/aiwf/test/integration/assistants/generated/data_extractor"
 )
 
 func TestDataExtractor_Integration(t *testing.T) {
@@ -39,7 +38,7 @@ func TestDataExtractor_Integration(t *testing.T) {
 	if trace == nil {
 		t.Fatal("Expected trace, got nil")
 	}
-	if trace.InputTokens == 0 && trace.OutputTokens == 0 {
+	if trace.Usage.Prompt == 0 && trace.Usage.Completion == 0 {
 		t.Logf("Warning: No token usage in trace: %+v", trace)
 	}
 
@@ -111,7 +110,7 @@ func TestDataExtractor_MultipleExtractionModes(t *testing.T) {
 			t.Logf("Mode: %s", tt.mode)
 			t.Logf("  Entities: %d", len(result.Entities))
 			t.Logf("  Relationships: %d", len(result.Relationships))
-			t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+			t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 		})
 	}
 }

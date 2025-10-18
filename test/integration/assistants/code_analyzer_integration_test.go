@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/assistants/generated/code_analyzer"
+	code_analyzer "github.com/andranikuz/aiwf/test/integration/assistants/generated/code_analyzer"
 )
 
 func TestCodeAnalyzer_Integration(t *testing.T) {
@@ -69,7 +69,7 @@ func main() {
 		}
 	}
 
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestCodeAnalyzer_MultipleLanguages(t *testing.T) {
@@ -133,7 +133,7 @@ password = "admin123"  # Hardcoded secret
 				AnalysisFocus: tt.focus,
 			}
 
-			result, trace, err := service.Agents().CodeAnalyzer.Run(ctx, input)
+			result, _, err := service.Agents().CodeAnalyzer.Run(ctx, input)
 			if err != nil {
 				t.Fatalf("CodeAnalyzer failed: %v", err)
 			}
@@ -253,5 +253,5 @@ func main() {
 		}
 	}
 
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }

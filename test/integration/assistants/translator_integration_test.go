@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/assistants/generated/translator"
+	translator "github.com/andranikuz/aiwf/test/integration/assistants/generated/translator"
 )
 
 func TestTranslator_Integration(t *testing.T) {
@@ -56,7 +56,7 @@ func TestTranslator_Integration(t *testing.T) {
 		}
 	}
 
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestTranslator_MultipleDomains(t *testing.T) {
@@ -127,7 +127,7 @@ func TestTranslator_MultipleDomains(t *testing.T) {
 			t.Logf("  Original: %q", tt.text)
 			t.Logf("  Translated: %q", result.TranslatedText)
 			t.Logf("  Confidence: %.2f", result.ConfidenceScore)
-			t.Logf("  Tokens: %d", trace.InputTokens+trace.OutputTokens)
+			t.Logf("  Tokens: %d", trace.Usage.Prompt+trace.Usage.Completion)
 		})
 	}
 }
@@ -166,7 +166,7 @@ As AI systems become more powerful and widespread, the ethical implications and 
 	t.Logf("  Original length: %d characters", len(input.Text))
 	t.Logf("  Translated length: %d characters", len(result.TranslatedText))
 	t.Logf("  Confidence: %.2f", result.ConfidenceScore)
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestTranslator_EdgeCases(t *testing.T) {

@@ -179,13 +179,9 @@ type textSection struct {
 }
 
 type textFormat struct {
-	Type       string          `json:"type"`
-	JSONSchema *jsonSchemaSpec `json:"json_schema,omitempty"`
-}
-
-type jsonSchemaSpec struct {
-	Name   string          `json:"name"`
-	Schema json.RawMessage `json:"schema"`
+	Type   string          `json:"type"`
+	Name   string          `json:"name,omitempty"`
+	Schema json.RawMessage `json:"schema,omitempty"`
 	Strict bool            `json:"strict,omitempty"`
 }
 
@@ -279,7 +275,8 @@ func (c *Client) buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error)
 		// If no metadata provided, create a minimal schema
 		minimalSchema := map[string]any{
 			"type": "object",
-			"additionalProperties": true,
+			"properties": map[string]any{},
+			"additionalProperties": false,
 		}
 		schema, err = json.Marshal(minimalSchema)
 		if err != nil {
@@ -291,12 +288,10 @@ func (c *Client) buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error)
 
 	return textSection{
 		Format: textFormat{
-			Type: "json_schema",
-			JSONSchema: &jsonSchemaSpec{
-				Name:   name,
-				Schema: schema,
-				Strict: true,
-			},
+			Type:   "json_schema",
+			Name:   name,
+			Schema: schema,
+			Strict: true,
 		},
 	}, nil
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/workflows/generated/blog_pipeline"
+	blog_pipeline "github.com/andranikuz/aiwf/test/integration/workflows/generated/blog_pipeline"
 )
 
 func TestBlogPipeline_Integration(t *testing.T) {
@@ -88,7 +88,7 @@ func TestBlogPipeline_ResearchAgent(t *testing.T) {
 	}
 
 	t.Logf("  Summary length: %d chars", len(result.Summary))
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestBlogPipeline_OutlineAgent(t *testing.T) {
@@ -145,7 +145,7 @@ func TestBlogPipeline_OutlineAgent(t *testing.T) {
 		}
 	}
 	t.Logf("  Estimated words: %d", result.EstimatedWords)
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestBlogPipeline_WriterAgent(t *testing.T) {
@@ -211,7 +211,7 @@ func TestBlogPipeline_WriterAgent(t *testing.T) {
 	t.Logf("  Title: %s", result.Title)
 	t.Logf("  Word count: %d", result.WordCount)
 	t.Logf("  Content preview: %s...", result.Content[:100])
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestBlogPipeline_EditorAgent(t *testing.T) {
@@ -253,7 +253,7 @@ func TestBlogPipeline_EditorAgent(t *testing.T) {
 	t.Logf("  Tags: %v", result.Metadata.Tags)
 	t.Logf("  Author: %s", result.Metadata.Author.Name)
 	t.Logf("  Reading time: %d minutes", result.Metadata.ReadingTimeMinutes)
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestBlogPipeline_AllAgents(t *testing.T) {

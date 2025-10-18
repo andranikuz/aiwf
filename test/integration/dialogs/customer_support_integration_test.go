@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/dialogs/generated/customer_support"
+	customer_support "github.com/andranikuz/aiwf/test/integration/dialogs/generated/customer_support"
 )
 
 func TestCustomerSupport_Integration(t *testing.T) {
@@ -63,7 +63,7 @@ func TestCustomerSupport_Integration(t *testing.T) {
 		}
 	}
 
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 func TestCustomerSupport_ComplexDialog(t *testing.T) {
@@ -123,7 +123,7 @@ func TestCustomerSupport_ComplexDialog(t *testing.T) {
 			t.Logf("  Customer: %s (%s)", customer.Name, customer.SubscriptionTier)
 			t.Logf("  Response: %s", result.Message[:50]+"...")
 			t.Logf("  Status: %s | Escalate: %v", result.ResolutionStatus, result.Escalate)
-			t.Logf("  Tokens: %d", trace.InputTokens+trace.OutputTokens)
+			t.Logf("  Tokens: %d", trace.Usage.Prompt+trace.Usage.Completion)
 		})
 	}
 }
@@ -255,7 +255,7 @@ func TestCustomerSupport_WithAttachments(t *testing.T) {
 		t.Logf("    - %s (%s, %d bytes)", att.Filename, att.MimeType, att.SizeBytes)
 	}
 	t.Logf("  Response status: %s", result.ResolutionStatus)
-	t.Logf("  Tokens (in/out): %d/%d", trace.InputTokens, trace.OutputTokens)
+	t.Logf("  Tokens (in/out): %d/%d", trace.Usage.Prompt, trace.Usage.Completion)
 }
 
 // Helper function to parse time

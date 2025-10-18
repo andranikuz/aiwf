@@ -26,6 +26,7 @@ func NewService(client aiwf.ModelClient) *Service {
 	s.agents = &Agents{
 		Translator: NewTranslatorAgent(client),
 	}
+	s.agents.Translator.Types = s // Inject TypeProvider
 
 	return s
 }

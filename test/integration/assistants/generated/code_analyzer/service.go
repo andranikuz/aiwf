@@ -26,6 +26,7 @@ func NewService(client aiwf.ModelClient) *Service {
 	s.agents = &Agents{
 		CodeAnalyzer: NewCodeAnalyzerAgent(client),
 	}
+	s.agents.CodeAnalyzer.Types = s // Inject TypeProvider
 
 	return s
 }

@@ -2,14 +2,6 @@
 
 package translator_sdk
 
-// TranslationResult represents TranslationResult
-type TranslationResult struct {
-	Notes []*TranslationNote `json:"notes"`
-	TranslatedText string `json:"translated_text"`
-	ConfidenceScore float64 `json:"confidence_score"`
-	Alternatives []*Alternative `json:"alternatives"`
-}
-
 // Alternative represents Alternative
 type Alternative struct {
 	Text string `json:"text"`
@@ -27,11 +19,19 @@ type TranslationNote struct {
 
 // TranslationRequest represents TranslationRequest
 type TranslationRequest struct {
+	PreserveFormatting bool `json:"preserve_formatting"`
 	Text string `json:"text"`
 	SourceLanguage string `json:"source_language"`
 	TargetLanguage string `json:"target_language"`
 	Domain string `json:"domain"`
-	PreserveFormatting bool `json:"preserve_formatting"`
+}
+
+// TranslationResult represents TranslationResult
+type TranslationResult struct {
+	TranslatedText string `json:"translated_text"`
+	ConfidenceScore float64 `json:"confidence_score"`
+	Alternatives []*Alternative `json:"alternatives"`
+	Notes []*TranslationNote `json:"notes"`
 }
 
 // ============ VALIDATORS ============
@@ -64,8 +64,118 @@ func ValidateTranslationResult(v *TranslationResult) error {
 
 // TypeMetadata exports type definitions for providers
 var TypeMetadata = map[string]interface{}{
-	"TranslationResult": nil, // TODO: export actual TypeDef
-	"Alternative": nil, // TODO: export actual TypeDef
-	"TranslationNote": nil, // TODO: export actual TypeDef
-	"TranslationRequest": nil, // TODO: export actual TypeDef
+	"Alternative": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"text": map[string]interface{}{
+		"type": "string",
+	},
+			"context": map[string]interface{}{
+		"type": "string",
+	},
+			"preference_score": map[string]interface{}{
+		"type": "number",
+	},
+		},
+		"required": []string{"text", "context", "preference_score"},
+		"additionalProperties": false,
+	},
+	"TranslationNote": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"cultural_adaptation", "idiom", "technical_term", "ambiguity"},
+	},
+			"original_phrase": map[string]interface{}{
+		"type": "string",
+	},
+			"translated_phrase": map[string]interface{}{
+		"type": "string",
+	},
+			"explanation": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"type", "original_phrase", "translated_phrase", "explanation"},
+		"additionalProperties": false,
+	},
+	"TranslationRequest": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"target_language": map[string]interface{}{
+		"type": "string",
+	},
+			"domain": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"general", "technical", "legal", "medical", "marketing"},
+	},
+			"preserve_formatting": map[string]interface{}{
+		"type": "boolean",
+	},
+			"text": map[string]interface{}{
+		"type": "string",
+	},
+			"source_language": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"target_language", "domain", "preserve_formatting", "text", "source_language"},
+		"additionalProperties": false,
+	},
+	"TranslationResult": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"translated_text": map[string]interface{}{
+		"type": "string",
+	},
+			"confidence_score": map[string]interface{}{
+		"type": "number",
+	},
+			"alternatives": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"text": map[string]interface{}{
+		"type": "string",
+	},
+			"context": map[string]interface{}{
+		"type": "string",
+	},
+			"preference_score": map[string]interface{}{
+		"type": "number",
+	},
+		},
+		"required": []string{"text", "context", "preference_score"},
+		"additionalProperties": false,
+	},
+	},
+			"notes": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"translated_phrase": map[string]interface{}{
+		"type": "string",
+	},
+			"explanation": map[string]interface{}{
+		"type": "string",
+	},
+			"type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"cultural_adaptation", "idiom", "technical_term", "ambiguity"},
+	},
+			"original_phrase": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"translated_phrase", "explanation", "type", "original_phrase"},
+		"additionalProperties": false,
+	},
+	},
+		},
+		"required": []string{"translated_text", "confidence_score", "alternatives", "notes"},
+		"additionalProperties": false,
+	},
 }

@@ -31,6 +31,12 @@ type ExtractedData struct {
 
 // ============ VALIDATORS ============
 
+// ValidateEntity validates Entity
+func ValidateEntity(v *Entity) error {
+	// No validation rules
+	return nil
+}
+
 // ValidateRelationship validates Relationship
 func ValidateRelationship(v *Relationship) error {
 	// No validation rules
@@ -49,18 +55,118 @@ func ValidateExtractedData(v *ExtractedData) error {
 	return nil
 }
 
-// ValidateEntity validates Entity
-func ValidateEntity(v *Entity) error {
-	// No validation rules
-	return nil
-}
-
 // ============ TYPE METADATA ============
 
 // TypeMetadata exports type definitions for providers
 var TypeMetadata = map[string]interface{}{
-	"Entity": nil, // TODO: export actual TypeDef
-	"Relationship": nil, // TODO: export actual TypeDef
-	"ExtractRequest": nil, // TODO: export actual TypeDef
-	"ExtractedData": nil, // TODO: export actual TypeDef
+	"Entity": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"person", "organization", "location", "date", "amount"},
+	},
+			"value": map[string]interface{}{
+		"type": "string",
+	},
+			"confidence": map[string]interface{}{
+		"type": "number",
+	},
+		},
+		"required": []string{"type", "value", "confidence"},
+		"additionalProperties": false,
+	},
+	"Relationship": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"subject": map[string]interface{}{
+		"type": "string",
+	},
+			"predicate": map[string]interface{}{
+		"type": "string",
+	},
+			"object": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"subject", "predicate", "object"},
+		"additionalProperties": false,
+	},
+	"ExtractRequest": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"text": map[string]interface{}{
+		"type": "string",
+	},
+			"extraction_mode": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"entities", "relationships", "full"},
+	},
+		},
+		"required": []string{"text", "extraction_mode"},
+		"additionalProperties": false,
+	},
+	"ExtractedData": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"metadata": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"extraction_timestamp": map[string]interface{}{
+		"type": "string",
+		"format": "date-time",
+	},
+			"source_length": map[string]interface{}{
+		"type": "integer",
+	},
+			"detected_language": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"extraction_timestamp", "source_length", "detected_language"},
+		"additionalProperties": false,
+	},
+			"entities": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"person", "organization", "location", "date", "amount"},
+	},
+			"value": map[string]interface{}{
+		"type": "string",
+	},
+			"confidence": map[string]interface{}{
+		"type": "number",
+	},
+		},
+		"required": []string{"type", "value", "confidence"},
+		"additionalProperties": false,
+	},
+	},
+			"relationships": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"predicate": map[string]interface{}{
+		"type": "string",
+	},
+			"object": map[string]interface{}{
+		"type": "string",
+	},
+			"subject": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"predicate", "object", "subject"},
+		"additionalProperties": false,
+	},
+	},
+		},
+		"required": []string{"metadata", "entities", "relationships"},
+		"additionalProperties": false,
+	},
 }

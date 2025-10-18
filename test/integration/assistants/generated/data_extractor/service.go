@@ -26,6 +26,7 @@ func NewService(client aiwf.ModelClient) *Service {
 	s.agents = &Agents{
 		DataExtractor: NewDataExtractorAgent(client),
 	}
+	s.agents.DataExtractor.Types = s // Inject TypeProvider
 
 	return s
 }

@@ -31,6 +31,7 @@ func (g *TypesGenerator) Generate(packageName string) (string, error) {
 
 	// Собираем импорты
 	g.collectImports()
+	g.removeUnusedImports()
 
 	// Импорты
 	if len(g.imports) > 0 {
@@ -107,6 +108,105 @@ func (g *TypesGenerator) collectImportsFromType(td *core.TypeDef) {
 	if td.MinLength != nil || td.MaxLength != nil {
 		g.imports[`"fmt"`] = true
 	}
+}
+
+// removeUnusedImports removes imports that are not actually used
+func (g *TypesGenerator) removeUnusedImports() {
+	if g.ir.Types == nil {
+		return
+	}
+
+	// Check if time is actually used
+	timeUsed := false
+	for _, typeDef := range g.ir.Types.Types {
+		if g.usesTimeInStruct(typeDef) {
+			timeUsed = true
+			break
+		}
+	}
+	if !timeUsed {
+		delete(g.imports, `"time"`)
+	}
+
+	// Check if regexp is actually used
+	regexpUsed := false
+	for _, typeDef := range g.ir.Types.Types {
+		if g.usesRegexp(typeDef) {
+			regexpUsed = true
+			break
+		}
+	}
+	if !regexpUsed {
+		delete(g.imports, `"regexp"`)
+	}
+
+	// Check if fmt is actually used
+	fmtUsed := false
+	for _, typeDef := range g.ir.Types.Types {
+		if g.usesFmt(typeDef) {
+			fmtUsed = true
+			break
+		}
+	}
+	if !fmtUsed {
+		delete(g.imports, `"fmt"`)
+	}
+}
+
+// usesTimeInStruct checks if a type uses time in its struct definition
+func (g *TypesGenerator) usesTimeInStruct(td *core.TypeDef) bool {
+	// Only check if it's an Object type (which generates a struct)
+	if td.Kind != core.KindObject {
+		return false
+	}
+
+	// Check if any property is datetime or date
+	for _, prop := range td.Properties {
+		if prop.Kind == core.KindDatetime || prop.Kind == core.KindDate {
+			return true
+		}
+		// Recursively check nested objects
+		if prop.Kind == core.KindArray && prop.Items != nil {
+			if prop.Items.Kind == core.KindDatetime || prop.Items.Kind == core.KindDate {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// usesRegexp checks if a type needs regexp
+func (g *TypesGenerator) usesRegexp(td *core.TypeDef) bool {
+	// Regexp is only needed if we're generating validators with email or url format
+	// Since we're only generating validators for objects, check them
+	if td.Kind != core.KindObject {
+		return false
+	}
+
+	for _, prop := range td.Properties {
+		if prop.Format == "email" || prop.Format == "url" {
+			return true
+		}
+	}
+
+	return false
+}
+
+// usesFmt checks if a type needs fmt
+func (g *TypesGenerator) usesFmt(td *core.TypeDef) bool {
+	// fmt is needed only if we're generating validators with length constraints
+	if td.Kind != core.KindObject {
+		return false
+	}
+
+	for _, prop := range td.Properties {
+		if prop.MinLength != nil || prop.MaxLength != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // generateType генерирует Go структуру из TypeDef
@@ -305,13 +405,100 @@ func (g *TypesGenerator) generateTypeMetadata() string {
 	b.WriteString("var TypeMetadata = map[string]interface{}{\n")
 
 	if g.ir.Types != nil {
-		for typeName := range g.ir.Types.Types {
-			b.WriteString(fmt.Sprintf("\t\"%s\": nil, // TODO: export actual TypeDef\n", typeName))
+		for typeName, typeDef := range g.ir.Types.Types {
+			schema := g.typeDefToSchema(typeName, typeDef)
+			b.WriteString(fmt.Sprintf("\t\"%s\": %s,\n", typeName, schema))
 		}
 	}
 
 	b.WriteString("}\n")
 
+	return b.String()
+}
+
+// typeDefToSchema конвертирует TypeDef в JSON Schema representation для TypeMetadata
+func (g *TypesGenerator) typeDefToSchema(typeName string, td *core.TypeDef) string {
+	var b strings.Builder
+	b.WriteString("map[string]interface{}{\n")
+
+	switch td.Kind {
+	case core.KindString:
+		b.WriteString("\t\t\"type\": \"string\",\n")
+	case core.KindInt:
+		b.WriteString("\t\t\"type\": \"integer\",\n")
+	case core.KindNumber:
+		b.WriteString("\t\t\"type\": \"number\",\n")
+	case core.KindBool:
+		b.WriteString("\t\t\"type\": \"boolean\",\n")
+	case core.KindDatetime:
+		b.WriteString("\t\t\"type\": \"string\",\n")
+		b.WriteString("\t\t\"format\": \"date-time\",\n")
+	case core.KindDate:
+		b.WriteString("\t\t\"type\": \"string\",\n")
+		b.WriteString("\t\t\"format\": \"date\",\n")
+	case core.KindUUID:
+		b.WriteString("\t\t\"type\": \"string\",\n")
+		b.WriteString("\t\t\"format\": \"uuid\",\n")
+	case core.KindEnum:
+		b.WriteString("\t\t\"type\": \"string\",\n")
+		b.WriteString("\t\t\"enum\": []string{")
+		for i, e := range td.Enum {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(fmt.Sprintf("\"%s\"", e))
+		}
+		b.WriteString("},\n")
+	case core.KindArray:
+		b.WriteString("\t\t\"type\": \"array\",\n")
+		if td.Items != nil {
+			b.WriteString("\t\t\"items\": ")
+			b.WriteString(g.typeDefToSchema("", td.Items))
+			b.WriteString(",\n")
+		}
+	case core.KindObject:
+		b.WriteString("\t\t\"type\": \"object\",\n")
+		if len(td.Properties) > 0 {
+			b.WriteString("\t\t\"properties\": map[string]interface{}{\n")
+			required := []string{}
+			for propName, propDef := range td.Properties {
+				b.WriteString(fmt.Sprintf("\t\t\t\"%s\": %s,\n", propName, g.typeDefToSchema("", propDef)))
+				required = append(required, propName)
+			}
+			b.WriteString("\t\t},\n")
+			b.WriteString("\t\t\"required\": []string{")
+			for i, r := range required {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(fmt.Sprintf("\"%s\"", r))
+			}
+			b.WriteString("},\n")
+		}
+		b.WriteString("\t\t\"additionalProperties\": false,\n")
+	case core.KindMap:
+		b.WriteString("\t\t\"type\": \"object\",\n")
+		b.WriteString("\t\t\"additionalProperties\": true,\n")
+	case core.KindRef:
+		// Resolve reference
+		refName := strings.TrimPrefix(td.Ref, "$")
+		if idx := strings.LastIndex(refName, "."); idx > 0 {
+			refName = refName[idx+1:]
+		}
+		// Look up the referenced type
+		if g.ir.Types != nil {
+			if refType, ok := g.ir.Types.Types[refName]; ok {
+				// Recursively generate schema for referenced type
+				return g.typeDefToSchema(refName, refType)
+			}
+		}
+		// Fallback if reference not found
+		b.WriteString("\t\t\"type\": \"object\",\n")
+	default:
+		b.WriteString("\t\t\"type\": \"object\",\n")
+	}
+
+	b.WriteString("\t}")
 	return b.String()
 }
 

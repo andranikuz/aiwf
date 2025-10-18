@@ -28,6 +28,22 @@ func (g *ServiceGenerator) Generate(packageName string) (string, error) {
 	// Imports
 	b.WriteString("import (\n")
 	b.WriteString("\t\"fmt\"\n")
+	if len(g.ir.Assistants) > 1 {
+		b.WriteString("\t\"strings\"\n")
+	}
+	// Check if we need strings for email validator
+	needsStrings := false
+	if g.ir.Types != nil {
+		for _, td := range g.ir.Types.Types {
+			if g.needsEmailValidator(td) {
+				needsStrings = true
+				break
+			}
+		}
+	}
+	if needsStrings && len(g.ir.Assistants) <= 1 {
+		b.WriteString("\t\"strings\"\n")
+	}
 	b.WriteString("\n")
 	b.WriteString("\t\"github.com/andranikuz/aiwf/runtime/go/aiwf\"\n")
 	b.WriteString(")\n\n")
@@ -56,12 +72,39 @@ func (g *ServiceGenerator) Generate(packageName string) (string, error) {
 
 	// Инициализируем агентов
 	b.WriteString("\t// Initialize agents\n")
+	if len(g.ir.Assistants) > 0 {
+		// Генерируем переменные для агентов если их несколько
+		hasMultipleAgents := len(g.ir.Assistants) > 1
+		if hasMultipleAgents {
+			for name := range g.ir.Assistants {
+				agentTypeName := toPascalCase(name) + "Agent"
+				b.WriteString(fmt.Sprintf("\t%s := New%s(client)\n",
+					strings.ToLower(string(name[0])) + name[1:] + "Agent", agentTypeName))
+				b.WriteString(fmt.Sprintf("\t%s.Types = s // Inject TypeProvider\n",
+					strings.ToLower(string(name[0])) + name[1:] + "Agent"))
+			}
+			b.WriteString("\n")
+		}
+	}
 	b.WriteString("\ts.agents = &Agents{\n")
 	for name := range g.ir.Assistants {
 		agentTypeName := toPascalCase(name) + "Agent"
-		b.WriteString(fmt.Sprintf("\t\t%s: New%s(client),\n", toPascalCase(name), agentTypeName))
+		if len(g.ir.Assistants) > 1 {
+			varName := strings.ToLower(string(name[0])) + name[1:] + "Agent"
+			b.WriteString(fmt.Sprintf("\t\t%s: %s,\n", toPascalCase(name), varName))
+		} else {
+			b.WriteString(fmt.Sprintf("\t\t%s: New%s(client),\n", toPascalCase(name), agentTypeName))
+		}
 	}
-	b.WriteString("\t}\n\n")
+	b.WriteString("\t}\n")
+
+	// Inject TypeProvider for single agent
+	if len(g.ir.Assistants) == 1 {
+		for name := range g.ir.Assistants {
+			b.WriteString(fmt.Sprintf("\ts.agents.%s.Types = s // Inject TypeProvider\n", toPascalCase(name)))
+		}
+	}
+	b.WriteString("\n")
 
 	// Инициализируем воркфлоу если есть
 	if len(g.ir.Workflows) > 0 {

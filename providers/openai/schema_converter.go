@@ -31,8 +31,9 @@ func (c *SchemaConverter) ConvertTypeMetadata(metadata any) (json.RawMessage, er
 	case *core.TypeDef:
 		return c.ConvertToJSONSchema(v)
 	case map[string]any:
-		// Already a schema-like structure
-		data, err := json.Marshal(v)
+		// Ensure additionalProperties is set for objects
+		schema := c.ensureAdditionalProperties(v)
+		data, err := json.Marshal(schema)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
 		}
@@ -40,6 +41,32 @@ func (c *SchemaConverter) ConvertTypeMetadata(metadata any) (json.RawMessage, er
 	default:
 		return nil, fmt.Errorf("unsupported metadata type: %T", metadata)
 	}
+}
+
+// ensureAdditionalProperties recursively adds additionalProperties: false to all objects
+func (c *SchemaConverter) ensureAdditionalProperties(schema map[string]any) map[string]any {
+	if typeStr, ok := schema["type"].(string); ok && typeStr == "object" {
+		// Only add if not already present
+		if _, hasAdditional := schema["additionalProperties"]; !hasAdditional {
+			schema["additionalProperties"] = false
+		}
+	}
+
+	// Recursively process properties
+	if props, ok := schema["properties"].(map[string]any); ok {
+		for _, prop := range props {
+			if propMap, ok := prop.(map[string]any); ok {
+				c.ensureAdditionalProperties(propMap)
+			}
+		}
+	}
+
+	// Recursively process array items
+	if items, ok := schema["items"].(map[string]any); ok {
+		c.ensureAdditionalProperties(items)
+	}
+
+	return schema
 }
 
 // typeDefToSchema converts TypeDef to JSON Schema map
@@ -140,8 +167,8 @@ func (c *SchemaConverter) typeDefToSchema(td *core.TypeDef) map[string]any {
 		schema["$ref"] = "#/definitions/" + td.Ref
 
 	case core.KindAny:
-		// Any type - no restrictions
-		schema["type"] = []string{"null", "boolean", "number", "string", "array", "object"}
+		// Any type - no type restrictions (don't specify type)
+		// OpenAI allows any valid JSON value for this field
 
 	case core.KindDatetime:
 		schema["type"] = "string"

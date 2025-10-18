@@ -1,11 +1,11 @@
-package integration
+package dialogs
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/generated/customer_support"
+	"github.com/andranikuz/aiwf/test/integration/dialogs/generated/customer_support"
 )
 
 func TestCustomerSupport_Integration(t *testing.T) {

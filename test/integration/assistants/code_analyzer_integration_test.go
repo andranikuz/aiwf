@@ -1,11 +1,11 @@
-package integration
+package assistants
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/generated/code_analyzer"
+	"github.com/andranikuz/aiwf/test/integration/assistants/generated/code_analyzer"
 )
 
 func TestCodeAnalyzer_Integration(t *testing.T) {

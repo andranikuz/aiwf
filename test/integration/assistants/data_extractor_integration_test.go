@@ -1,4 +1,4 @@
-package integration
+package assistants
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/generated/data_extractor"
+	"github.com/andranikuz/aiwf/test/integration/assistants/generated/data_extractor"
 )
 
 func TestDataExtractor_Integration(t *testing.T) {

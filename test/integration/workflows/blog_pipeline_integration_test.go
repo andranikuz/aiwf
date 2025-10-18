@@ -1,11 +1,11 @@
-package integration
+package workflows
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/generated/blog_pipeline"
+	"github.com/andranikuz/aiwf/test/integration/workflows/generated/blog_pipeline"
 )
 
 func TestBlogPipeline_Integration(t *testing.T) {

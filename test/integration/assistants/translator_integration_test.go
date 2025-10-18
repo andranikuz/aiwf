@@ -1,11 +1,11 @@
-package integration
+package assistants
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/andranikuz/aiwf/test/integration/generated/translator"
+	"github.com/andranikuz/aiwf/test/integration/assistants/generated/translator"
 )
 
 func TestTranslator_Integration(t *testing.T) {

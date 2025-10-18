@@ -2,23 +2,38 @@
 
 Набор интеграционных тестов для проверки работы сгенерированных SDK с реальным OpenAI API.
 
+Тесты организованы в 3 категории:
+- **assistants** - простые одношаговые ассистенты
+- **dialogs** - многошаговые диалоговые системы
+- **workflows** - сложные многошаговые воркфлоу
+
 ## Структура
 
 ```
-integration/
-├── README.md                              # Этот файл
-├── setup_test.go                          # Инициализация и загрузка конфигурации
-├── data_extractor_integration_test.go     # Тесты для data_extractor агента
-├── code_analyzer_integration_test.go      # Тесты для code_analyzer агента
-├── translator_integration_test.go         # Тесты для translator агента
-├── customer_support_integration_test.go   # Тесты для customer_support диалога
-├── blog_pipeline_integration_test.go      # Тесты для blog_pipeline воркфлоу
-└── generated/                              # Сгенерированные SDK
-    ├── data_extractor/
-    ├── code_analyzer/
-    ├── translator/
-    ├── customer_support/
-    └── blog_pipeline/
+test/integration/
+├── assistants/                          # Простые ассистенты
+│   ├── setup_test.go                   # Инициализация и загрузка конфигурации
+│   ├── data_extractor_integration_test.go
+│   ├── code_analyzer_integration_test.go
+│   ├── translator_integration_test.go
+│   └── generated/                       # Сгенерированные SDK
+│       ├── data_extractor/
+│       ├── code_analyzer/
+│       └── translator/
+│
+├── dialogs/                             # Диалоговые системы
+│   ├── setup_test.go
+│   ├── customer_support_integration_test.go
+│   └── generated/
+│       └── customer_support/
+│
+├── workflows/                           # Многошаговые воркфлоу
+│   ├── setup_test.go
+│   ├── blog_pipeline_integration_test.go
+│   └── generated/
+│       └── blog_pipeline/
+│
+└── README.md                            # Этот файл
 ```
 
 ## Требования
@@ -65,53 +80,70 @@ export OPENAI_API_KEY=sk-your-actual-key-here
 ### Запуск всех тестов
 
 ```bash
-go test -v ./test/integration
+go test -v ./test/integration/...
+```
+
+### Запуск тестов по категориям
+
+**Assistants (простые ассистенты):**
+```bash
+go test -v ./test/integration/assistants
+```
+
+**Dialogs (диалоговые системы):**
+```bash
+go test -v ./test/integration/dialogs
+```
+
+**Workflows (многошаговые воркфлоу):**
+```bash
+go test -v ./test/integration/workflows
 ```
 
 ### Запуск конкретного теста
 
 ```bash
 # Data Extractor тесты
-go test -v -run TestDataExtractor ./test/integration
+go test -v -run TestDataExtractor ./test/integration/assistants
 
 # Code Analyzer тесты
-go test -v -run TestCodeAnalyzer ./test/integration
+go test -v -run TestCodeAnalyzer ./test/integration/assistants
 
 # Translator тесты
-go test -v -run TestTranslator ./test/integration
+go test -v -run TestTranslator ./test/integration/assistants
 
 # Customer Support тесты
-go test -v -run TestCustomerSupport ./test/integration
+go test -v -run TestCustomerSupport ./test/integration/dialogs
 
 # Blog Pipeline тесты
-go test -v -run TestBlogPipeline ./test/integration
+go test -v -run TestBlogPipeline ./test/integration/workflows
 ```
 
 ### Запуск конкретного подтеста
 
 ```bash
 # Только основной тест Data Extractor
-go test -v -run TestDataExtractor_Integration ./test/integration
+go test -v -run TestDataExtractor_Integration ./test/integration/assistants
 
 # Тест с несколькими режимами
-go test -v -run TestDataExtractor_MultipleExtractionModes ./test/integration
+go test -v -run TestDataExtractor_MultipleExtractionModes ./test/integration/assistants
 ```
 
 ### Запуск с временным лимитом
 
 ```bash
-go test -v -timeout 5m ./test/integration
+go test -v -timeout 5m ./test/integration/...
 ```
 
 ### Запуск с подробным логированием
 
 ```bash
-go test -v -run TestDataExtractor -args -test.v ./test/integration
+go test -v -run TestDataExtractor -args -test.v ./test/integration/assistants
 ```
 
 ## Описание тестов
 
-### data_extractor_integration_test.go
+### assistants/data_extractor_integration_test.go
 
 Тесты для агента извлечения структурированной информации из текста.
 
@@ -119,7 +151,7 @@ go test -v -run TestDataExtractor -args -test.v ./test/integration
 - **TestDataExtractor_MultipleExtractionModes**: Тест разных режимов работы (entities, relationships, full)
 - **TestDataExtractor_EdgeCases**: Граничные случаи (пустые строки, сложный текст)
 
-### code_analyzer_integration_test.go
+### assistants/code_analyzer_integration_test.go
 
 Тесты для агента анализа кода на качество и безопасность.
 
@@ -127,7 +159,7 @@ go test -v -run TestDataExtractor -args -test.v ./test/integration
 - **TestCodeAnalyzer_MultipleLanguages**: Анализ кода на разных языках (Python, JavaScript, Rust)
 - **TestCodeAnalyzer_ComplexCode**: Анализ реалистичного кода с множественными проблемами
 
-### translator_integration_test.go
+### assistants/translator_integration_test.go
 
 Тесты для агента перевода текста.
 
@@ -136,7 +168,7 @@ go test -v -run TestDataExtractor -args -test.v ./test/integration
 - **TestTranslator_LongForm**: Перевод многострочного текста
 - **TestTranslator_EdgeCases**: Граничные случаи (код, URLs, спецсимволы)
 
-### customer_support_integration_test.go
+### dialogs/customer_support_integration_test.go
 
 Тесты для диалогового агента поддержки клиентов.
 
@@ -145,7 +177,7 @@ go test -v -run TestDataExtractor -args -test.v ./test/integration
 - **TestCustomerSupport_DifferentSubscriptions**: Проверка обработки разных уровней подписки
 - **TestCustomerSupport_WithAttachments**: Обработка сообщений с вложениями
 
-### blog_pipeline_integration_test.go
+### workflows/blog_pipeline_integration_test.go
 
 Тесты для воркфлоу создания блог-поста.
 
@@ -193,7 +225,7 @@ export OPENAI_API_KEY=sk-your-key
 
 - Проверьте интернет соединение
 - Проверьте актуальность API ключа
-- Увеличьте timeout: `go test -timeout 2m ./test/integration`
+- Увеличьте timeout: `go test -timeout 2m ./test/integration/...`
 
 ### Ошибка: invalid API key
 
@@ -212,7 +244,7 @@ OpenAI API имеет ограничения по частоте запросо�
 
 ```bash
 # Используйте -parallel flag для ограничения одновременных тестов
-go test -v -parallel 1 ./test/integration
+go test -v -parallel 1 ./test/integration/...
 ```
 
 ## Регенерация SDK
@@ -220,20 +252,16 @@ go test -v -parallel 1 ./test/integration
 Если вы обновите YAML спецификации в `templates/`, нужно пересоздать SDK:
 
 ```bash
-# Сгенерировать SDK для data_extractor
-go run ./cmd/aiwf sdk -f templates/assistant/data_extractor.yaml -o test/integration/generated/data_extractor --package data_extractor_sdk
+# Assistants
+go run ./cmd/aiwf sdk -f templates/assistant/data_extractor.yaml -o test/integration/assistants/generated/data_extractor --package data_extractor_sdk
+go run ./cmd/aiwf sdk -f templates/assistant/code_analyzer.yaml -o test/integration/assistants/generated/code_analyzer --package code_analyzer_sdk
+go run ./cmd/aiwf sdk -f templates/assistant/translator.yaml -o test/integration/assistants/generated/translator --package translator_sdk
 
-# Сгенерировать SDK для code_analyzer
-go run ./cmd/aiwf sdk -f templates/assistant/code_analyzer.yaml -o test/integration/generated/code_analyzer --package code_analyzer_sdk
+# Dialogs
+go run ./cmd/aiwf sdk -f templates/dialog/customer_support.yaml -o test/integration/dialogs/generated/customer_support --package customer_support_sdk
 
-# Сгенерировать SDK для translator
-go run ./cmd/aiwf sdk -f templates/assistant/translator.yaml -o test/integration/generated/translator --package translator_sdk
-
-# Сгенерировать SDK для customer_support
-go run ./cmd/aiwf sdk -f templates/dialog/customer_support.yaml -o test/integration/generated/customer_support --package customer_support_sdk
-
-# Сгенерировать SDK для blog_pipeline
-go run ./cmd/aiwf sdk -f templates/workflow/blog_pipeline.yaml -o test/integration/generated/blog_pipeline --package blog_pipeline_sdk
+# Workflows
+go run ./cmd/aiwf sdk -f templates/workflow/blog_pipeline.yaml -o test/integration/workflows/generated/blog_pipeline --package blog_pipeline_sdk
 ```
 
 ## Примечания

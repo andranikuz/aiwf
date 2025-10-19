@@ -74,12 +74,20 @@ func (p *TypeParser) parseObjectType(name string, obj map[interface{}]interface{
 			return nil, fmt.Errorf("field name must be string, got %T", key)
 		}
 
-		fieldType, err := p.parseFieldType(fieldName, value)
+		// Check if field is optional (ends with ?)
+		isOptional := false
+		actualFieldName := fieldName
+		if strings.HasSuffix(fieldName, "?") {
+			isOptional = true
+			actualFieldName = strings.TrimSuffix(fieldName, "?")
+		}
+
+		fieldType, err := p.parseFieldType(actualFieldName, value)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse field %s: %w", fieldName, err)
 		}
-
-		typeDef.Properties[fieldName] = fieldType
+		fieldType.Optional = isOptional
+		typeDef.Properties[actualFieldName] = fieldType
 	}
 
 	return typeDef, nil
@@ -95,11 +103,20 @@ func (p *TypeParser) parseObjectTypeString(name string, obj map[string]interface
 	}
 
 	for fieldName, value := range obj {
-		fieldType, err := p.parseFieldType(fieldName, value)
+		// Check if field is optional (ends with ?)
+		isOptional := false
+		actualFieldName := fieldName
+		if strings.HasSuffix(fieldName, "?") {
+			isOptional = true
+			actualFieldName = strings.TrimSuffix(fieldName, "?")
+		}
+
+		fieldType, err := p.parseFieldType(actualFieldName, value)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse field %s: %w", fieldName, err)
 		}
-		typeDef.Properties[fieldName] = fieldType
+		fieldType.Optional = isOptional
+		typeDef.Properties[actualFieldName] = fieldType
 	}
 
 	return typeDef, nil

@@ -76,6 +76,11 @@ func (m *InMemoryThreadManager) Close(ctx context.Context, state *aiwf.ThreadSta
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Check if thread exists before closing
+	if _, ok := m.threads[state.ID]; !ok {
+		return fmt.Errorf("thread %s not found", state.ID)
+	}
+
 	delete(m.threads, state.ID)
 	return nil
 }

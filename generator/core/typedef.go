@@ -42,6 +42,7 @@ type TypeDef struct {
 	// Метаданные
 	Description string
 	Required    bool // все поля обязательные по умолчанию
+	Optional    bool // поле помечено как опциональное (с ? суффиксом)
 }
 
 // TypeKind определяет вид типа

@@ -489,17 +489,23 @@ func (g *TypesGenerator) typeDefToSchema(typeName string, td *core.TypeDef) stri
 			required := []string{}
 			for propName, propDef := range td.Properties {
 				b.WriteString(fmt.Sprintf("\t\t\t\"%s\": %s,\n", propName, g.typeDefToSchema("", propDef)))
-				required = append(required, propName)
+				// Only add to required array if not optional
+				if !propDef.Optional {
+					required = append(required, propName)
+				}
 			}
 			b.WriteString("\t\t},\n")
-			b.WriteString("\t\t\"required\": []string{")
-			for i, r := range required {
-				if i > 0 {
-					b.WriteString(", ")
+			// Only add required array if there are required fields
+			if len(required) > 0 {
+				b.WriteString("\t\t\"required\": []string{")
+				for i, r := range required {
+					if i > 0 {
+						b.WriteString(", ")
+					}
+					b.WriteString(fmt.Sprintf("\"%s\"", r))
 				}
-				b.WriteString(fmt.Sprintf("\"%s\"", r))
+				b.WriteString("},\n")
 			}
-			b.WriteString("},\n")
 		}
 		b.WriteString("\t\t\"additionalProperties\": false,\n")
 	case core.KindMap:

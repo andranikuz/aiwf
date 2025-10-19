@@ -46,7 +46,6 @@ types:
   Action:
     type: enum(open_ticket, send_email, schedule_call, show_article)
     label: string
-    data: map(string, any)
 
   SupportMessage:
     customer_id: uuid

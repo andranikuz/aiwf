@@ -33,6 +33,12 @@ func (g *TypesGenerator) Generate(packageName string) (string, error) {
 	g.collectImports()
 	g.removeUnusedImports()
 
+	// Добавляем импорт strings если нужна email валидация
+	if g.hasEmailValidation() {
+		g.imports[`"strings"`] = true
+		g.imports[`"fmt"`] = true
+	}
+
 	// Импорты
 	if len(g.imports) > 0 {
 		b.WriteString("import (\n")
@@ -70,6 +76,16 @@ func (g *TypesGenerator) Generate(packageName string) (string, error) {
 	b.WriteString("// ============ TYPE METADATA ============\n\n")
 	b.WriteString(g.generateTypeMetadata())
 
+	// Add helper functions if needed
+	b.WriteString("// ============ HELPERS ============\n\n")
+	if g.hasEmailValidation() {
+		b.WriteString("func isValidEmail(email string) bool {\n")
+		b.WriteString("\t// Simple email validation\n")
+		b.WriteString("\treturn strings.Contains(email, \"@\") && strings.Contains(email, \".\")\n")
+		b.WriteString("}\n")
+		g.imports[`"strings"`] = true
+	}
+
 	return b.String(), nil
 }
 
@@ -102,9 +118,6 @@ func (g *TypesGenerator) collectImportsFromType(td *core.TypeDef) {
 	}
 
 	// Для валидации
-	if td.Format == "email" || td.Format == "url" {
-		g.imports[`"regexp"`] = true
-	}
 	if td.MinLength != nil || td.MaxLength != nil {
 		g.imports[`"fmt"`] = true
 	}
@@ -126,18 +139,6 @@ func (g *TypesGenerator) removeUnusedImports() {
 	}
 	if !timeUsed {
 		delete(g.imports, `"time"`)
-	}
-
-	// Check if regexp is actually used
-	regexpUsed := false
-	for _, typeDef := range g.ir.Types.Types {
-		if g.usesRegexp(typeDef) {
-			regexpUsed = true
-			break
-		}
-	}
-	if !regexpUsed {
-		delete(g.imports, `"regexp"`)
 	}
 
 	// Check if fmt is actually used
@@ -195,7 +196,9 @@ func (g *TypesGenerator) usesRegexp(td *core.TypeDef) bool {
 
 // usesFmt checks if a type needs fmt
 func (g *TypesGenerator) usesFmt(td *core.TypeDef) bool {
-	// fmt is needed only if we're generating validators with length constraints
+	// fmt is needed if we're generating validators with:
+	// - length constraints
+	// - email/url validation
 	if td.Kind != core.KindObject {
 		return false
 	}
@@ -203,6 +206,29 @@ func (g *TypesGenerator) usesFmt(td *core.TypeDef) bool {
 	for _, prop := range td.Properties {
 		if prop.MinLength != nil || prop.MaxLength != nil {
 			return true
+		}
+		// Check for email or url validation
+		if prop.Format == "email" || prop.Format == "url" {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasEmailValidation checks if any type needs email validation
+func (g *TypesGenerator) hasEmailValidation() bool {
+	if g.ir.Types == nil {
+		return false
+	}
+
+	for _, typeDef := range g.ir.Types.Types {
+		if typeDef.Kind == core.KindObject {
+			for _, prop := range typeDef.Properties {
+				if prop.Format == "email" {
+					return true
+				}
+			}
 		}
 	}
 

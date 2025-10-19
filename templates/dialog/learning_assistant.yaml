@@ -5,6 +5,9 @@ assistants:
   tutor:
     use: openai
     model: gpt-4o
+    thread:
+      use: default
+      strategy: append
     dialog:
       max_rounds: 20
     system_prompt: |

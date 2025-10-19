@@ -31,19 +31,6 @@ func (g *ServiceGenerator) Generate(packageName string) (string, error) {
 	if len(g.ir.Assistants) > 1 {
 		b.WriteString("\t\"strings\"\n")
 	}
-	// Check if we need strings for email validator
-	needsStrings := false
-	if g.ir.Types != nil {
-		for _, td := range g.ir.Types.Types {
-			if g.needsEmailValidator(td) {
-				needsStrings = true
-				break
-			}
-		}
-	}
-	if needsStrings && len(g.ir.Assistants) <= 1 {
-		b.WriteString("\t\"strings\"\n")
-	}
 	b.WriteString("\n")
 	b.WriteString("\t\"github.com/andranikuz/aiwf/runtime/go/aiwf\"\n")
 	b.WriteString(")\n\n")
@@ -197,28 +184,6 @@ func (g *ServiceGenerator) Generate(packageName string) (string, error) {
 			b.WriteString("\t})\n")
 			b.WriteString("}\n\n")
 		}
-	}
-
-	// Helper functions
-	b.WriteString("// ============ HELPERS ============\n\n")
-
-	// Email validator если нужен
-	needsEmailValidator := false
-	if g.ir.Types != nil {
-		for _, td := range g.ir.Types.Types {
-			if g.needsEmailValidator(td) {
-				needsEmailValidator = true
-				break
-			}
-		}
-	}
-
-	if needsEmailValidator {
-		b.WriteString("// isValidEmail checks if email is valid\n")
-		b.WriteString("func isValidEmail(email string) bool {\n")
-		b.WriteString("\t// Simple email validation\n")
-		b.WriteString("\treturn strings.Contains(email, \"@\") && strings.Contains(email, \".\")\n")
-		b.WriteString("}\n")
 	}
 
 	return b.String(), nil

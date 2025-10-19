@@ -5,6 +5,9 @@ assistants:
   support_bot:
     use: openai
     model: gpt-4o
+    thread:
+      use: default
+      strategy: append
     dialog:
       max_rounds: 10
     system_prompt: |

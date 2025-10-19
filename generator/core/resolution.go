@@ -54,6 +54,22 @@ func ResolveSpec(spec *Spec) error {
 			}
 			assistant.Resolved.OutputType = outputType
 		}
+
+		// Validate dialog configuration
+		if assistant.Dialog != nil && assistant.Thread == nil {
+			return fmt.Errorf("assistant %s: dialog mode requires thread configuration (add 'thread' field)", name)
+		}
+	}
+
+	// Validate workflow steps that use dialog
+	if spec.Workflows != nil {
+		for wfName, workflow := range spec.Workflows {
+			for _, dagStep := range workflow.DAG {
+				if dagStep.Dialog != nil && dagStep.Thread == nil {
+					return fmt.Errorf("workflow %s step %s: dialog mode requires thread configuration (add 'thread' field)", wfName, dagStep.Step)
+				}
+			}
+		}
 	}
 
 	return nil

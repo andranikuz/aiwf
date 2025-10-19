@@ -489,13 +489,12 @@ func (g *TypesGenerator) typeDefToSchema(typeName string, td *core.TypeDef) stri
 			required := []string{}
 			for propName, propDef := range td.Properties {
 				b.WriteString(fmt.Sprintf("\t\t\t\"%s\": %s,\n", propName, g.typeDefToSchema("", propDef)))
-				// Only add to required array if not optional
-				if !propDef.Optional {
-					required = append(required, propName)
-				}
+				// Add all fields to required array (OpenAI strict schema requires this)
+				// If a field is truly optional, it should not be in properties at all
+				required = append(required, propName)
 			}
 			b.WriteString("\t\t},\n")
-			// Only add required array if there are required fields
+			// Always add required array with all properties (OpenAI requirement)
 			if len(required) > 0 {
 				b.WriteString("\t\t\"required\": []string{")
 				for i, r := range required {

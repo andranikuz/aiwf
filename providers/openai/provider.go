@@ -32,10 +32,11 @@ type ClientConfig struct {
 
 // Client реализует aiwf.ModelClient для OpenAI Responses API.
 type Client struct {
-	baseURL   string
-	apiKey    string
-	http      *http.Client
-	converter *SchemaConverter
+	baseURL        string
+	apiKey         string
+	http           *http.Client
+	converter      *SchemaConverter
+	threadManager  aiwf.ThreadManager
 }
 
 // NewClient создаёт клиента с базовыми значениями.
@@ -67,6 +68,12 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 		http:      httpClient,
 		converter: NewSchemaConverter(),
 	}, nil
+}
+
+// WithThreadManager устанавливает менеджер тредов для диалогов
+func (c *Client) WithThreadManager(tm aiwf.ThreadManager) *Client {
+	c.threadManager = tm
+	return c
 }
 
 // CallJSONSchema выполняет синхронный запрос к Responses API.

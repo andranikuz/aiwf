@@ -18,6 +18,7 @@ type Agents struct {
 // SupportBotAgent represents the support_bot agent
 type SupportBotAgent struct {
 	aiwf.AgentBase
+	threadBinding *aiwf.ThreadBinding
 }
 
 // NewSupportBotAgent creates a new support_bot agent
@@ -34,6 +35,10 @@ func NewSupportBotAgent(client aiwf.ModelClient) *SupportBotAgent {
 				Temperature:    0.7,
 			},
 			Client: client,
+		},
+		threadBinding: &aiwf.ThreadBinding{
+			Name:     "default",
+			Strategy: "append",
 		},
 	}
 }
@@ -58,6 +63,30 @@ func (a *SupportBotAgent) Run(ctx context.Context, input SupportMessage) (*Suppo
 	}
 
 	return &output, trace, nil
+}
+
+// RunWithThread executes the support_bot agent with thread state
+func (a *SupportBotAgent) RunWithThread(ctx context.Context, input SupportMessage, thread *aiwf.ThreadState) (*SupportResponse, *aiwf.Trace, error) {
+	if err := ValidateSupportMessage(&input); err != nil {
+		return nil, nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	result, trace, err := a.CallModel(ctx, input, thread)
+	if err != nil {
+		return nil, trace, err
+	}
+
+	var output SupportResponse
+	if err := json.Unmarshal(result, &output); err != nil {
+		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &output, trace, nil
+}
+
+// ThreadBinding returns thread configuration for support_bot
+func (a *SupportBotAgent) ThreadBinding() *aiwf.ThreadBinding {
+	return a.threadBinding
 }
 
 // RunDialog executes the support_bot agent in dialog mode

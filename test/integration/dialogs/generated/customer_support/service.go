@@ -78,10 +78,3 @@ func (s *Service) GetOutputTypeFor(agentName string) (string, any, error) {
 	}
 }
 
-// ============ HELPERS ============
-
-// isValidEmail checks if email is valid
-func isValidEmail(email string) bool {
-	// Simple email validation
-	return strings.Contains(email, "@") && strings.Contains(email, ".")
-}

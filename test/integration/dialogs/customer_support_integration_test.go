@@ -18,7 +18,7 @@ func TestCustomerSupport_Integration(t *testing.T) {
 
 	// Create sample customer
 	customer := &customer_support.Customer{
-		ID:                "550e8400-e29b-41d4-a716-446655440000",
+		Id:                "550e8400-e29b-41d4-a716-446655440000",
 		Name:              "John Doe",
 		Email:             "john@example.com",
 		SubscriptionTier:  "pro",
@@ -27,11 +27,11 @@ func TestCustomerSupport_Integration(t *testing.T) {
 
 	// Create support message
 	input := customer_support.SupportMessage{
-		CustomerID: "550e8400-e29b-41d4-a716-446655440000",
+		CustomerId: customer.Id,
 		Message:    "I'm unable to access my dashboard. I keep getting a 403 error when I try to log in.",
 		Context: &customer_support.ConversationContext{
-			SessionID:      "sess-123456789",
-			TicketID:       "ticket-987654321",
+			SessionId:      "sess-123456789",
+			TicketId:       "ticket-987654321",
 			PreviousMessages: []*customer_support.Message{},
 			CustomerInfo:   customer,
 		},
@@ -75,7 +75,7 @@ func TestCustomerSupport_ComplexDialog(t *testing.T) {
 	service := customer_support.NewService(openaiClient)
 
 	customer := &customer_support.Customer{
-		ID:               "550e8400-e29b-41d4-a716-446655440000",
+		Id:               "550e8400-e29b-41d4-a716-446655440000",
 		Name:             "Jane Smith",
 		Email:            "jane@example.com",
 		SubscriptionTier: "enterprise",
@@ -100,11 +100,11 @@ func TestCustomerSupport_ComplexDialog(t *testing.T) {
 	for _, conv := range conversations {
 		t.Run(conv.context, func(t *testing.T) {
 			input := customer_support.SupportMessage{
-				CustomerID: customer.ID,
+				CustomerId: customer.Id,
 				Message:    conv.message,
 				Context: &customer_support.ConversationContext{
-					SessionID:     "sess-enterprise-001",
-					TicketID:      "ticket-critical-001",
+					SessionId:     "sess-enterprise-001",
+					TicketId:      "ticket-critical-001",
 					CustomerInfo: customer,
 				},
 				Attachments: []*customer_support.Attachment{},
@@ -161,7 +161,7 @@ func TestCustomerSupport_DifferentSubscriptions(t *testing.T) {
 	for _, sub := range subscriptions {
 		t.Run(sub.tier, func(t *testing.T) {
 			customer := &customer_support.Customer{
-				ID:               "550e8400-e29b-41d4-a716-446655440000",
+				Id:               "550e8400-e29b-41d4-a716-446655440000",
 				Name:             "Support User",
 				Email:            "user@example.com",
 				SubscriptionTier: sub.tier,
@@ -169,11 +169,11 @@ func TestCustomerSupport_DifferentSubscriptions(t *testing.T) {
 			}
 
 			input := customer_support.SupportMessage{
-				CustomerID: customer.ID,
+				CustomerId: customer.Id,
 				Message:    sub.issue,
 				Context: &customer_support.ConversationContext{
-					SessionID:    "sess-sub-test",
-					TicketID:     "ticket-sub-" + sub.tier,
+					SessionId:    "sess-sub-test",
+					TicketId:     "ticket-sub-" + sub.tier,
 					CustomerInfo: customer,
 				},
 				Attachments: []*customer_support.Attachment{},
@@ -207,7 +207,7 @@ func TestCustomerSupport_WithAttachments(t *testing.T) {
 	service := customer_support.NewService(openaiClient)
 
 	customer := &customer_support.Customer{
-		ID:               "550e8400-e29b-41d4-a716-446655440000",
+		Id:               "550e8400-e29b-41d4-a716-446655440000",
 		Name:             "Bob Wilson",
 		Email:            "bob@example.com",
 		SubscriptionTier: "pro",
@@ -219,23 +219,23 @@ func TestCustomerSupport_WithAttachments(t *testing.T) {
 			Filename: "error_screenshot.png",
 			MimeType: "image/png",
 			SizeBytes: 256000,
-			URL:      "https://storage.example.com/attachments/error_screenshot.png",
+			Url:      "https://storage.example.com/attachments/error_screenshot.png",
 		},
 		{
 			Filename: "logs.txt",
 			MimeType: "text/plain",
 			SizeBytes: 4096,
-			URL:      "https://storage.example.com/attachments/logs.txt",
+			Url:      "https://storage.example.com/attachments/logs.txt",
 		},
 	}
 
 	input := customer_support.SupportMessage{
-		CustomerID:  customer.ID,
+		CustomerId:  customer.Id,
 		Message:     "I'm getting an error when trying to use the bulk import feature. I've attached a screenshot and the error logs.",
 		Attachments: attachments,
 		Context: &customer_support.ConversationContext{
-			SessionID:    "sess-with-attachments",
-			TicketID:     "ticket-with-attachments",
+			SessionId:    "sess-with-attachments",
+			TicketId:     "ticket-with-attachments",
 			CustomerInfo: customer,
 		},
 	}

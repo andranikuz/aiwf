@@ -169,11 +169,24 @@ aiwf validate -f config.yaml
 aiwf sdk -f config.yaml -o ./generated --package myapp
 ```
 
+## Совместимость с OpenAI API
+
+### JSON Schema Requirements
+
+При использовании сгенерированных типов с OpenAI Responses API (`response_format`):
+
+- ✅ Все поля в `properties` автоматически добавляются в `required` массив
+- ✅ Соответствует OpenAI Strict JSON Schema требованиям
+- ✅ Генерируется `"additionalProperties": false` для type safety
+
+Это обеспечивает полную совместимость с OpenAI's structured outputs.
+
 ## Текущие ограничения
 
 - Валидация ограничений пока не генерируется полностью
 - Workflows требуют доработки под новую систему типов
-- Опциональные поля пока не поддерживаются
+- Опциональные поля (помеченные `?`) требуют либо исключения из типа,
+  либо добавления в `required` (для OpenAI совместимости)
 
 ## Roadmap
 

@@ -40,6 +40,24 @@
 
 **Result**: Basic thread management working, suitable for development/testing
 
+### Phase 4: Integration Tests for Dialogs ✅ ENHANCED
+**Commit: 65bb96b** - Enriched dialog integration tests
+
+- ✅ Fixed all struct field name mismatches (camelCase in structs)
+- ✅ Created comprehensive dialog_test.go with 7 test functions:
+  - ThreadManagerIntegration: Basic setup test
+  - ThreadLifecycle: Complete thread lifecycle
+  - MultipleThreads: Concurrent thread management
+  - SingleTurnWithThreads: Dialog with thread support
+  - ThreadStateMetadata: Metadata preservation
+  - ErrorHandling: Error cases
+  - BasicWorkflow: Multi-turn dialog simulation
+
+- ✅ All tests compile successfully
+- ⚠️ Require OPENAI_API_KEY to run (skip otherwise)
+
+**Result**: 7 new tests covering ThreadManager functionality
+
 ## In Progress 🔄
 
 ### Phase 3: DialogDecider Implementation (Next)
@@ -76,20 +94,9 @@ type DialogDecision struct {
 
 ## Pending ⏳
 
-### Phase 4: Dialog Integration Tests
+### Phase 3: DialogDecider Implementation (NEXT)
 
-**What to test**:
-- Single-turn dialog (immediate completion)
-- Multi-turn dialog with retries
-- Thread management (create, append, close)
-- TypeMetadata passing through dialog calls
-- Error handling and recovery
-
-**Test files to update**:
-- `test/integration/dialogs/customer_support_integration_test.go`
-  - Fix struct field name mismatches (ID vs Id)
-  - Implement multi-turn test scenarios
-  - Test with real OpenAI API
+Need to implement decision logic for multi-turn dialogs. See section below for details.
 
 ### Phase 5: Workflow Orchestration
 
@@ -142,12 +149,12 @@ Multi-turn flow:
 ## Recent Git Log
 
 ```
+65bb96b test: enrich dialog integration tests with ThreadManager tests
+c477efe docs: add dialog implementation progress and roadmap
 00f67f4 feat: add basic ThreadManager implementation for dialogs
 89c96a3 fix: implement dialog validation and generator improvements
 c1e306b feat: add debugging logs for TypeMetadata flow in SDK
 857d91d docs: add TypeMetadata flow and debugging guide
-e5d551c docs: add comprehensive issue resolution summary
-ad68d66 docs: add quick fix guide for TypeMetadata error
 ```
 
 ## Quick Start for Next Developer

@@ -45,15 +45,17 @@ func ResolveSpec(spec *Spec) error {
 			assistant.Resolved.InputType = inputType
 		}
 
-		// Resolve output type
-		if assistant.OutputType != "" {
-			outputType, err := resolveTypeByName(assistant.OutputType, spec.Resolved.TypeRegistry)
-			if err != nil {
-				return fmt.Errorf("assistant %s: failed to resolve output type %s: %w",
-					name, assistant.OutputType, err)
-			}
-			assistant.Resolved.OutputType = outputType
+		// Resolve output type (по умолчанию string если не указан)
+		outputTypeName := assistant.OutputType
+		if outputTypeName == "" {
+			outputTypeName = "string"
 		}
+		outputType, err := resolveTypeByName(outputTypeName, spec.Resolved.TypeRegistry)
+		if err != nil {
+			return fmt.Errorf("assistant %s: failed to resolve output type %s: %w",
+				name, outputTypeName, err)
+		}
+		assistant.Resolved.OutputType = outputType
 
 		// Validate dialog configuration
 		if assistant.Dialog != nil && assistant.Thread == nil {

@@ -45,9 +45,10 @@ func BuildIR(spec *Spec) (*IR, error) {
 	merr := &MultiError{}
 
 	for name, as := range spec.Assistants {
-		if as.OutputType == "" {
-			merr.Append(&ValidationError{Field: fmt.Sprintf("assistants.%s.output_type", name), Msg: "output type не указан"})
-			continue
+		// Если output_type не указан, используем string по умолчанию
+		outputTypeName := as.OutputType
+		if outputTypeName == "" {
+			outputTypeName = "string"
 		}
 
         assistant := IRAssistant{
@@ -56,7 +57,7 @@ func BuildIR(spec *Spec) (*IR, error) {
             SystemPrompt:   as.SystemPrompt,
             Use:            as.Use,
             InputTypeName:  as.InputType,
-            OutputTypeName: as.OutputType,
+            OutputTypeName: outputTypeName,
             InputType:      as.Resolved.InputType,
             OutputType:     as.Resolved.OutputType,
             DependsOn:      cloneSlice(as.DependsOn),

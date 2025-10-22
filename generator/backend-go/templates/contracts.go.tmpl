@@ -1,33 +1,51 @@
 package {{ .Package }}
 
-// NOTE: Ниже показаны заглушки типов. Замените `map[string]any` на структуры,
-//      соответствующие JSON Schema, чтобы получить типизированный SDK.
+{{- define "renderContract" -}}
+{{- $c := . -}}
+{{- if $c.IsStruct }}
+// {{ $c.Name }} соответствует схеме {{ $c.SchemaRef }}.
+type {{ $c.Name }} struct {
+{{- range $c.Root.Fields }}
+    {{ .Name }} {{ .Type }} `json:"{{ .JSON }}"`
+{{- end }}
+}
 
+{{- range $c.Nested }}
+type {{ .Name }} struct {
+{{- range .Fields }}
+    {{ .Name }} {{ .Type }} `json:"{{ .JSON }}"`
+{{- end }}
+}
+
+{{- end }}
+{{- else if $c.Alias }}
+// {{ $c.Name }} соответствует схеме {{ $c.SchemaRef }}.
+type {{ $c.Name }} = {{ $c.Alias }}
+
+{{- if $c.Enum }}
+const (
+{{- range $c.Enum }}
+    {{ .Const }} {{ $c.Name }} = {{ printf "%q" .Value }}
+{{- end }}
+)
+
+{{- end }}
+{{- else }}
+// {{ $c.Name }} соответствует схеме {{ $c.SchemaRef }}.
+type {{ $c.Name }} map[string]any
+
+{{- end }}
+{{- end }}
+
+{{- if .Shared }}
+{{- range .Shared }}
+{{ template "renderContract" . }}
+{{ end }}
+
+{{- end }}
 {{- range .Assistants }}
-{{- if .InputContract.Fields }}
-// {{ .MethodName }}Input соответствует схеме {{ .InputSchemaRef }}.
-type {{ .MethodName }}Input struct {
-{{- range .InputContract.Fields }}
-    {{ .Name }} {{ .Type }} `json:"{{ .JSON }}"`
-{{- end }}
-}
-{{- else }}
-// {{ .MethodName }}Input соответствует схеме {{ .InputSchemaRef }}.
-type {{ .MethodName }}Input map[string]any
-{{- end }}
-
-{{- if .OutputContract.Fields }}
-// {{ .MethodName }}Output соответствует схеме {{ .OutputSchemaRef }}.
-type {{ .MethodName }}Output struct {
-{{- range .OutputContract.Fields }}
-    {{ .Name }} {{ .Type }} `json:"{{ .JSON }}"`
-{{- end }}
-}
-{{- else }}
-// {{ .MethodName }}Output соответствует схеме {{ .OutputSchemaRef }}.
-type {{ .MethodName }}Output map[string]any
-{{- end }}
-
+{{ template "renderContract" .InputContract }}
+{{ template "renderContract" .OutputContract }}
 {{ end }}
 
 {{- range .Workflows }}

@@ -1,11 +1,19 @@
 package generated
 
-// NOTE: Ниже показаны заглушки типов. Замените `map[string]any` на структуры,
-//      соответствующие JSON Schema, чтобы получить типизированный SDK.
+// Tone соответствует схеме aiwf://common/Tone.
+type Tone = string
+const (
+    ToneDark Tone = "dark"
+    ToneHopeful Tone = "hopeful"
+    TonePlayful Tone = "playful"
+)
+
+
 // CriticInput соответствует схеме critic_input.json.
 type CriticInput struct {
     Draft string `json:"draft"`
 }
+
 // CriticOutput соответствует схеме critic_output.json.
 type CriticOutput struct {
     Notes string `json:"notes"`
@@ -18,12 +26,18 @@ type WriterInput struct {
     MaxTokens int `json:"maxTokens"`
     Prompt string `json:"prompt"`
 }
+
 // WriterOutput соответствует схеме writer_output.json.
 type WriterOutput struct {
+    Chapters []WriterOutputChaptersItem `json:"chapters"`
     Draft string `json:"draft"`
     Duration float64 `json:"duration"`
+    Tone Tone `json:"tone"`
 }
-
+type WriterOutputChaptersItem struct {
+    Id string `json:"id"`
+    Title string `json:"title"`
+}
 
 // NovelInput описывает вход workflow.
 type NovelInput = WriterInput

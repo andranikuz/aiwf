@@ -1,0 +1,38 @@
+version: 0.3-proposal
+# Анализатор кода - простой одношаговый ассистент
+
+assistants:
+  code_analyzer:
+    use: openai
+    model: gpt-4o
+    system_prompt: |
+      Analyze provided code for quality issues.
+      Focus on bugs, security vulnerabilities, and performance.
+    input_type: CodeAnalysisRequest
+    output_type: AnalysisResult
+
+types:
+  Issue:
+    severity: enum(critical, high, medium, low)
+    type: enum(bug, vulnerability, performance, style)
+    line: int
+    message: string
+    suggestion: string
+
+  Metric:
+    name: string
+    value: number
+    unit: string
+
+  CodeAnalysisRequest:
+    code: string(1..50000)
+    language: enum(python, javascript, typescript, go, java, rust)
+    analysis_focus: enum(security, performance, maintainability, all)
+
+  AnalysisResult:
+    issues: $Issue[]
+    metrics: $Metric[]
+    summary:
+      total_issues: int
+      critical_count: int
+      quality_score: number(0..100)

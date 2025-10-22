@@ -9,8 +9,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/andranikuz/aiwf/runtime/go/aiwf"
 )
@@ -30,9 +32,11 @@ type ClientConfig struct {
 
 // Client реализует aiwf.ModelClient для OpenAI Responses API.
 type Client struct {
-	baseURL string
-	apiKey  string
-	http    *http.Client
+	baseURL        string
+	apiKey         string
+	http           *http.Client
+	converter      *SchemaConverter
+	threadManager  aiwf.ThreadManager
 }
 
 // NewClient создаёт клиента с базовыми значениями.
@@ -59,10 +63,17 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL: base,
-		apiKey:  cfg.APIKey,
-		http:    httpClient,
+		baseURL:   base,
+		apiKey:    cfg.APIKey,
+		http:      httpClient,
+		converter: NewSchemaConverter(),
 	}, nil
+}
+
+// WithThreadManager устанавливает менеджер тредов для диалогов
+func (c *Client) WithThreadManager(tm aiwf.ThreadManager) *Client {
+	c.threadManager = tm
+	return c
 }
 
 // CallJSONSchema выполняет синхронный запрос к Responses API.
@@ -95,19 +106,8 @@ func (c *Client) CallJSONSchema(ctx context.Context, call aiwf.ModelCall) ([]byt
 	}
 	log.Printf("openai: output json=%s", structuredText)
 
-	var payload any
-	if err := json.Unmarshal([]byte(structuredText), &payload); err != nil {
-		return nil, aiwf.Tokens{}, fmt.Errorf("openai: parse structured json: %w", err)
-	}
-
-	if err := validateSchema(call.OutputSchemaRef, payload); err != nil {
-		return nil, aiwf.Tokens{}, err
-	}
-
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return nil, aiwf.Tokens{}, err
-	}
+	// Return raw JSON bytes
+	raw := []byte(structuredText)
 
 	usage := aiwf.Tokens{
 		Prompt:     parsed.Usage.PromptTokens,
@@ -138,7 +138,7 @@ func (c *Client) newRequest(ctx context.Context, call aiwf.ModelCall) (*http.Req
 		return nil, err
 	}
 
-	format, err := buildJSONSchemaFormat(call)
+	format, err := c.buildJSONSchemaFormat(call)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +149,9 @@ func (c *Client) newRequest(ctx context.Context, call aiwf.ModelCall) (*http.Req
 		MaxOutputTokens: call.MaxTokens,
 		Temperature:     call.Temperature,
 		Text:            format,
+	}
+	if meta := buildMetadata(call); len(meta) > 0 {
+		payload.Metadata = meta
 	}
 
 	body, err := json.Marshal(payload)
@@ -168,20 +171,14 @@ func (c *Client) newRequest(ctx context.Context, call aiwf.ModelCall) (*http.Req
 	return req, nil
 }
 
-// validateSchema пока что выполняет заглушку, заменяем настоящей валидацией после интеграции с runtime validate.
-func validateSchema(schemaRef string, data any) error {
-	if schemaRef == "" {
-		return errors.New("openai: schema reference is required")
-	}
-	return nil
-}
 
 type requestPayload struct {
-	Model           string      `json:"model"`
-	Input           any         `json:"input"`
-	MaxOutputTokens int         `json:"max_output_tokens,omitempty"`
-	Temperature     float64     `json:"temperature,omitempty"`
-	Text            textSection `json:"text"`
+	Model           string         `json:"model"`
+	Input           any            `json:"input"`
+	MaxOutputTokens int            `json:"max_output_tokens,omitempty"`
+	Temperature     float64        `json:"temperature,omitempty"`
+	Text            textSection    `json:"text"`
+	Metadata        map[string]any `json:"metadata,omitempty"`
 }
 
 type textSection struct {
@@ -189,9 +186,10 @@ type textSection struct {
 }
 
 type textFormat struct {
-	Type       string          `json:"type"`
-	Name       string          `json:"name"`
-	JSONSchema json.RawMessage `json:"schema"`
+	Type   string          `json:"type"`
+	Name   string          `json:"name,omitempty"`
+	Schema json.RawMessage `json:"schema,omitempty"`
+	Strict bool            `json:"strict,omitempty"`
 }
 
 type inputMessage struct {
@@ -266,27 +264,101 @@ func buildInputMessages(call aiwf.ModelCall) ([]inputMessage, error) {
 	return messages, nil
 }
 
-func buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
-	if len(call.OutputSchema) == 0 {
-		return textSection{}, errors.New("openai: output schema is required")
+func (c *Client) buildJSONSchemaFormat(call aiwf.ModelCall) (textSection, error) {
+	if call.OutputTypeName == "" {
+		return textSection{}, errors.New("openai: output type name is required")
 	}
 
-	name := firstNonEmpty(call.OutputSchemaRef, "aiwf_output")
+	// Convert type metadata to JSON Schema
+	var schema json.RawMessage
+	var err error
+
+	if call.TypeMetadata != nil {
+		log.Printf("openai: buildJSONSchemaFormat - TypeMetadata is not nil")
+		schema, err = c.converter.ConvertTypeMetadata(call.TypeMetadata)
+		if err != nil {
+			return textSection{}, fmt.Errorf("openai: failed to convert type metadata: %w", err)
+		}
+	} else {
+		// If no metadata provided, create a minimal schema
+		log.Printf("openai: buildJSONSchemaFormat - WARNING: TypeMetadata is nil, using minimal schema")
+		minimalSchema := map[string]any{
+			"type": "object",
+			"properties": map[string]any{},
+			"additionalProperties": false,
+		}
+		schema, err = json.Marshal(minimalSchema)
+		if err != nil {
+			return textSection{}, fmt.Errorf("openai: failed to create minimal schema: %w", err)
+		}
+	}
+
+	name := schemaFormatName(call.OutputTypeName)
 
 	return textSection{
 		Format: textFormat{
-			Type:       "json_schema",
-			Name:       name,
-			JSONSchema: call.OutputSchema,
+			Type:   "json_schema",
+			Name:   name,
+			Schema: schema,
+			Strict: true,
 		},
 	}, nil
 }
 
-func firstNonEmpty(value, fallback string) string {
-	if strings.TrimSpace(value) == "" {
-		return fallback
+func schemaFormatName(ref string) string {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return "aiwf_output"
 	}
-	return strings.Replace(value, ".", "_", 1)
+
+	candidate := ref
+	if strings.Contains(candidate, "://") {
+		if idx := strings.LastIndex(candidate, "/"); idx >= 0 && idx < len(candidate)-1 {
+			candidate = candidate[idx+1:]
+		}
+	} else if strings.Contains(candidate, "/") {
+		candidate = filepath.Base(candidate)
+	}
+
+	candidate = strings.TrimSuffix(candidate, filepath.Ext(candidate))
+	if candidate == "" {
+		candidate = "aiwf_output"
+	}
+
+	sanitized := make([]rune, 0, len(candidate))
+	for _, r := range candidate {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			sanitized = append(sanitized, r)
+			continue
+		}
+		if r == '_' || r == '-' {
+			sanitized = append(sanitized, r)
+			continue
+		}
+		sanitized = append(sanitized, '_')
+	}
+
+	name := strings.TrimLeftFunc(string(sanitized), func(r rune) bool { return r == '_' || r == '-' })
+	if name == "" {
+		name = "aiwf_output"
+	}
+	return name
+}
+
+func buildMetadata(call aiwf.ModelCall) map[string]any {
+	if call.ThreadID == "" && len(call.ThreadMetadata) == 0 {
+		return nil
+	}
+	meta := make(map[string]any)
+	if call.ThreadID != "" {
+		meta["thread_id"] = call.ThreadID
+	}
+	if len(call.ThreadMetadata) > 0 {
+		for k, v := range call.ThreadMetadata {
+			meta[k] = v
+		}
+	}
+	return meta
 }
 
 func extractStructuredText(messages []responseMessage) (string, error) {

@@ -2,6 +2,17 @@
   "type": "object",
   "properties": {
     "draft": {"type": "string"},
-    "duration": {"type": "number"}
+    "duration": {"type": "number"},
+    "tone": {"$ref": "aiwf://common/Tone"},
+    "chapters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"}
+        }
+      }
+    }
   }
 }

@@ -7,7 +7,7 @@ import (
     "github.com/andranikuz/aiwf/runtime/go/aiwf"
 )
 var criticOutputSchemaJSON = json.RawMessage("{\n  \"type\": \"object\",\n  \"properties\": {\n    \"score\": {\"type\": \"number\"},\n    \"notes\": {\"type\": \"string\"}\n  }\n}\n")
-var writerOutputSchemaJSON = json.RawMessage("{\n  \"type\": \"object\",\n  \"properties\": {\n    \"draft\": {\"type\": \"string\"},\n    \"duration\": {\"type\": \"number\"}\n  }\n}\n")
+var writerOutputSchemaJSON = json.RawMessage("{\n  \"type\": \"object\",\n  \"properties\": {\n    \"draft\": {\"type\": \"string\"},\n    \"duration\": {\"type\": \"number\"},\n    \"tone\": {\"$ref\": \"aiwf://common/Tone\"},\n    \"chapters\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": {\"type\": \"string\"},\n          \"title\": {\"type\": \"string\"}\n        }\n      }\n    }\n  }\n}\n")
 
 type Agents interface {
     Critic() CriticAgent
@@ -20,14 +20,14 @@ type agents struct {
 func (a *agents) Critic() CriticAgent { return &criticAgent{client: a.client} }
 
 type CriticAgent interface {
-    Run(ctx context.Context, input CriticInput) (CriticOutput, *aiwf.Trace, error)
+    Run(ctx context.Context, input CriticInput, state *aiwf.ThreadState) (CriticOutput, *aiwf.ThreadState, *aiwf.Trace, error)
 }
 
 type criticAgent struct {
     client aiwf.ModelClient
 }
 
-func (a *criticAgent) Run(ctx context.Context, input CriticInput) (CriticOutput, *aiwf.Trace, error) {
+func (a *criticAgent) Run(ctx context.Context, input CriticInput, state *aiwf.ThreadState) (CriticOutput, *aiwf.ThreadState, *aiwf.Trace, error) {
     call := aiwf.ModelCall{
         Model:           "gpt-4-turbo",
         SystemPrompt:    "Provide critique",
@@ -36,31 +36,35 @@ func (a *criticAgent) Run(ctx context.Context, input CriticInput) (CriticOutput,
         OutputSchema:    criticOutputSchemaJSON,
         Payload:         input,
     }
+    if state != nil {
+        call.ThreadID = state.ID
+        call.ThreadMetadata = state.Metadata
+    }
 
     raw, usage, err := a.client.CallJSONSchema(ctx, call)
     if err != nil {
-        return CriticOutput{}, nil, err
+        return CriticOutput{}, state, nil, err
     }
 
     var output CriticOutput
     if err := json.Unmarshal(raw, &output); err != nil {
-        return CriticOutput{}, nil, err
+        return CriticOutput{}, state, nil, err
     }
 
     trace := &aiwf.Trace{StepName: "critic", Usage: usage}
-    return output, trace, nil
+    return output, state, trace, nil
 }
 func (a *agents) Writer() WriterAgent { return &writerAgent{client: a.client} }
 
 type WriterAgent interface {
-    Run(ctx context.Context, input WriterInput) (WriterOutput, *aiwf.Trace, error)
+    Run(ctx context.Context, input WriterInput, state *aiwf.ThreadState) (WriterOutput, *aiwf.ThreadState, *aiwf.Trace, error)
 }
 
 type writerAgent struct {
     client aiwf.ModelClient
 }
 
-func (a *writerAgent) Run(ctx context.Context, input WriterInput) (WriterOutput, *aiwf.Trace, error) {
+func (a *writerAgent) Run(ctx context.Context, input WriterInput, state *aiwf.ThreadState) (WriterOutput, *aiwf.ThreadState, *aiwf.Trace, error) {
     call := aiwf.ModelCall{
         Model:           "gpt-4",
         SystemPrompt:    "You are a writing assistant",
@@ -69,17 +73,21 @@ func (a *writerAgent) Run(ctx context.Context, input WriterInput) (WriterOutput,
         OutputSchema:    writerOutputSchemaJSON,
         Payload:         input,
     }
+    if state != nil {
+        call.ThreadID = state.ID
+        call.ThreadMetadata = state.Metadata
+    }
 
     raw, usage, err := a.client.CallJSONSchema(ctx, call)
     if err != nil {
-        return WriterOutput{}, nil, err
+        return WriterOutput{}, state, nil, err
     }
 
     var output WriterOutput
     if err := json.Unmarshal(raw, &output); err != nil {
-        return WriterOutput{}, nil, err
+        return WriterOutput{}, state, nil, err
     }
 
     trace := &aiwf.Trace{StepName: "writer", Usage: usage}
-    return output, trace, nil
+    return output, state, trace, nil
 }

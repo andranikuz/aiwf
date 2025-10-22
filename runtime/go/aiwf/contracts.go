@@ -2,7 +2,6 @@ package aiwf
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 )
 
@@ -22,18 +21,22 @@ type Trace struct {
 	ArtifactID string
 }
 
-// ModelCall описывает запрос к LLM c привязкой к JSON Schema.
+// ModelCall описывает запрос к LLM.
 type ModelCall struct {
-	Model           string
-	InputSchemaRef  string
-	OutputSchemaRef string
-	OutputSchema    json.RawMessage
-	SystemPrompt    string
-	UserPrompt      string
-	MaxTokens       int
-	Temperature     float64
-	Stream          bool
-	Payload         any
+	Model          string
+	SystemPrompt   string
+	UserPrompt     string
+	MaxTokens      int
+	Temperature    float64
+	Stream         bool
+	Payload        any // Входные данные (уже типизированные)
+	ThreadID       string
+	ThreadMetadata map[string]any
+
+	// Метаданные типов для провайдера
+	InputTypeName  string // Имя входного типа
+	OutputTypeName string // Имя выходного типа
+	TypeMetadata   any    // Опциональные метаданные типа (например, TypeDef для провайдера)
 }
 
 // StreamChunk описывает инкрементальные ответы модели при потоковой генерации.
@@ -66,4 +69,41 @@ type ArtifactStore interface {
 	Put(ctx context.Context, key string, data []byte) error
 	Get(ctx context.Context, key string) ([]byte, bool, error)
 	Key(workflow, step, item, inputHash string) string
+}
+
+// ThreadState описывает состояние треда в провайдере.
+type ThreadState struct {
+	ID       string
+	Metadata map[string]any
+}
+
+// ThreadBinding описывает политику работы с тредом.
+type ThreadBinding struct {
+	Name     string
+	Provider string
+	Strategy string
+	Metadata map[string]any
+}
+
+// ThreadManager управляет жизненным циклом тредов между шагами.
+type ThreadManager interface {
+	Start(ctx context.Context, assistant string, binding ThreadBinding) (*ThreadState, error)
+	Continue(ctx context.Context, state *ThreadState, feedback string) error
+	Close(ctx context.Context, state *ThreadState) error
+}
+
+// TypeProvider предоставляет метаданные типов для провайдеров.
+// SDK реализует этот интерфейс для экспорта информации о типах.
+type TypeProvider interface {
+	GetTypeMetadata(typeName string) (any, error)
+	GetInputTypeFor(agentName string) (string, any, error)
+	GetOutputTypeFor(agentName string) (string, any, error)
+}
+
+// Agent описывает базовый интерфейс агента.
+// Конкретные агенты в SDK будут иметь типизированные методы.
+type Agent interface {
+	Name() string
+	Model() string
+	SystemPrompt() string
 }

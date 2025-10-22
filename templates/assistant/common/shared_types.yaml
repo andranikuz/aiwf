@@ -1,0 +1,21 @@
+# Общие типы для ассистентов
+
+types:
+  User:
+    id: uuid
+    email: string(email)
+    name: string(1..100)
+
+  Timestamp:
+    created_at: datetime
+    updated_at: datetime
+
+  Error:
+    code: string
+    message: string
+    details: map(string, any)
+
+  Pagination:
+    page: int(1..)
+    per_page: int(1..100)
+    total: int(0..)

@@ -2,56 +2,67 @@ package core
 
 // Spec описывает parsed YAML.
 type Spec struct {
-	Version        string                   `yaml:"version"`
-	SchemaRegistry SchemaRegistrySpec       `yaml:"schema_registry"`
-	Assistants     map[string]AssistantSpec `yaml:"assistants"`
-	Workflows      map[string]WorkflowSpec  `yaml:"workflows"`
+	Version    string                   `yaml:"version"`
+	Imports    []ImportSpec             `yaml:"imports"`
+	Types      map[string]interface{}   `yaml:"types"`
+	Threads    map[string]ThreadSpec    `yaml:"threads"`
+	Assistants map[string]AssistantSpec `yaml:"assistants"`
+	Resolved   SpecResolution           `yaml:"-"`
 }
 
-// SchemaRegistrySpec описывает расположение JSON Schema.
-type SchemaRegistrySpec struct {
-	Root string `yaml:"root"`
+// ImportSpec описывает подключение YAML-файла с типами.
+type ImportSpec struct {
+	As   string `yaml:"as"`
+	Path string `yaml:"path"`
+}
+
+// SpecResolution содержит вспомогательные структуры, полученные при загрузке.
+type SpecResolution struct {
+	TypeRegistry *TypeRegistry
 }
 
 // AssistantSpec описывает агента в YAML.
 type AssistantSpec struct {
-	Use             string   `yaml:"use"`
-	Model           string   `yaml:"model"`
-	SystemPrompt    string   `yaml:"system_prompt"`
-	InputSchemaRef  string   `yaml:"input_schema_ref"`
-	OutputSchemaRef string   `yaml:"output_schema_ref"`
-	DependsOn       []string `yaml:"depends_on"`
-	// Resolved пути заполняются загрузчиком.
-	Resolved AssistantResolution `yaml:"-"`
+	Use          string   `yaml:"use"`
+	Model        string   `yaml:"model"`
+	SystemPrompt string   `yaml:"system_prompt"`
+	InputType    string   `yaml:"input_type"`
+	OutputType   string   `yaml:"output_type"`
+	MaxTokens    int      `yaml:"max_tokens"`
+	Temperature  float64  `yaml:"temperature"`
+	DependsOn    []string `yaml:"depends_on"`
+	Thread       *ThreadBindingSpec `yaml:"thread"`
+	Dialog       *DialogSpec        `yaml:"dialog"`
+	Resolved     AssistantResolution `yaml:"-"`
 }
 
-// AssistantResolution содержит абсолютные пути к схемам.
+// AssistantResolution содержит разрешённые типы.
 type AssistantResolution struct {
-	InputSchemaPath  string
-	OutputSchemaPath string
+	InputType  *TypeDef
+	OutputType *TypeDef
 }
 
-// WorkflowSpec описывает workflow.
-type WorkflowSpec struct {
-	Description string        `yaml:"description"`
-	DAG         []WorkflowDAG `yaml:"dag"`
+// ThreadSpec описывает политику работы с тредами.
+type ThreadSpec struct {
+	Provider      string         `yaml:"provider"`
+	Strategy      string         `yaml:"strategy"`
+	Create        bool           `yaml:"create"`
+	CloseOnFinish bool           `yaml:"close_on_finish"`
+	TTLHours      int            `yaml:"ttl_hours"`
+	Metadata      map[string]any `yaml:"metadata"`
 }
 
-// WorkflowDAG описывает шаг воркфлоу.
-type WorkflowDAG struct {
-	Step         string         `yaml:"step"`
-	Assistant    string         `yaml:"assistant"`
-	Needs        []string       `yaml:"needs"`
-	Scatter      *ScatterSpec   `yaml:"scatter"`
-	InputBinding map[string]any `yaml:"input_binding"`
+// ThreadBindingSpec привязывает ассистента/шаг к политике треда.
+type ThreadBindingSpec struct {
+	Use      string `yaml:"use"`
+	Strategy string `yaml:"strategy"`
 }
 
-// ScatterSpec описывает fan-out шаг.
-type ScatterSpec struct {
-	From        string `yaml:"from"`
-	As          string `yaml:"as"`
-	Concurrency int    `yaml:"concurrency"`
+// DialogSpec описывает диалоговые настройки.
+type DialogSpec struct {
+	MaxRounds int `yaml:"max_rounds"`
 }
+
 
 // ValidationError описывает ошибку загрузки.
 type ValidationError struct {

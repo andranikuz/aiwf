@@ -6,36 +6,35 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"time"
 
-	"github.com/andranikuz/aiwf/providers/internal/retry"
 	"github.com/andranikuz/aiwf/runtime/go/aiwf"
 )
 
 const (
 	defaultBaseURL = "https://api.anthropic.com/v1"
-	messagesPath   = "/messages"
+	anthropicVersion = "2023-06-01"
 )
 
-// ClientConfig задаёт параметры клиента Anthropic.
+// ClientConfig определяет параметры доступа к Anthropic API.
 type ClientConfig struct {
 	BaseURL    string
 	APIKey     string
-	Version    string
 	HTTPClient *http.Client
-	Retry      retry.Strategy
+	Timeout    time.Duration
 }
 
-// Client реализует aiwf.ModelClient для Anthropic Messages API.
+// Client реализует aiwf.ModelClient для Anthropic (Claude).
 type Client struct {
-	baseURL string
-	apiKey  string
-	version string
-	http    *http.Client
-	retry   retry.Strategy
+	baseURL   string
+	apiKey    string
+	http      *http.Client
+	threadMgr aiwf.ThreadManager
 }
 
-// NewClient создаёт клиента и валидирует обязательные поля.
+// NewClient создаёт клиента для Anthropic.
 func NewClient(cfg ClientConfig) (*Client, error) {
 	if cfg.APIKey == "" {
 		return nil, errors.New("anthropic: api key is required")
@@ -46,166 +45,160 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 		base = defaultBaseURL
 	}
 
-	version := cfg.Version
-	if version == "" {
-		version = "2023-06-01"
+	timeout := cfg.Timeout
+	if timeout == 0 {
+		timeout = 60 * time.Second
 	}
 
 	httpClient := cfg.HTTPClient
 	if httpClient == nil {
-		httpClient = &http.Client{}
-	}
-
-	strat := cfg.Retry
-	if strat.MaxAttempts == 0 {
-		strat = retry.DefaultStrategy()
+		httpClient = &http.Client{Timeout: timeout}
+	} else if httpClient.Timeout == 0 {
+		httpClient.Timeout = timeout
 	}
 
 	return &Client{
-		baseURL: base,
-		apiKey:  cfg.APIKey,
-		version: version,
-		http:    httpClient,
-		retry:   strat,
+		baseURL:   base,
+		apiKey:    cfg.APIKey,
+		http:      httpClient,
+		threadMgr: nil,
 	}, nil
 }
 
-// CallJSONSchema выполняет запрос Messages API c JSON Schema.
+// WithThreadManager устанавливает менеджер тредов
+func (c *Client) WithThreadManager(tm aiwf.ThreadManager) *Client {
+	c.threadMgr = tm
+	return c
+}
+
+// CallJSONSchema выполняет запрос к Anthropic API.
 func (c *Client) CallJSONSchema(ctx context.Context, call aiwf.ModelCall) ([]byte, aiwf.Tokens, error) {
-	if call.OutputSchemaRef == "" {
-		return nil, aiwf.Tokens{}, errors.New("anthropic: output schema ref is required")
-	}
-
-	messages := make([]message, 0, 2)
-	if call.SystemPrompt != "" {
-		messages = append(messages, message{
-			Role:    "system",
-			Content: []contentBlock{{Type: "text", Text: call.SystemPrompt}},
-		})
-	}
-	messages = append(messages, message{
-		Role:    "user",
-		Content: []contentBlock{{Type: "text", Text: call.UserPrompt}},
-	})
-
-	payload := requestPayload{
-		Model:           call.Model,
-		Messages:        messages,
-		MaxOutputTokens: call.MaxTokens,
-		Temperature:     call.Temperature,
-		ResponseFormat: responseFormat{
-			Type: "json_schema",
-			Schema: schemaDescriptor{
-				Name: call.OutputSchemaRef,
-			},
-		},
-	}
-
-	body, err := json.Marshal(payload)
+	req, err := c.newMessageRequest(ctx, call)
 	if err != nil {
-		return nil, aiwf.Tokens{}, err
+		return nil, aiwf.Tokens{}, fmt.Errorf("anthropic: failed to create request: %w", err)
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+messagesPath, bytes.NewReader(body))
-	if err != nil {
-		return nil, aiwf.Tokens{}, err
-	}
-
-	req.Header.Set("x-api-key", c.apiKey)
-	req.Header.Set("anthropic-version", c.version)
-	req.Header.Set("content-type", "application/json")
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, aiwf.Tokens{}, err
+		return nil, aiwf.Tokens{}, fmt.Errorf("anthropic: request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return nil, aiwf.Tokens{}, fmt.Errorf("anthropic: status %d", resp.StatusCode)
+		buf, _ := io.ReadAll(resp.Body)
+		return nil, aiwf.Tokens{}, fmt.Errorf("anthropic: unexpected status %d: %s", resp.StatusCode, string(buf))
 	}
 
-	var parsed responsePayload
+	var parsed Message
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, aiwf.Tokens{}, err
+		return nil, aiwf.Tokens{}, fmt.Errorf("anthropic: failed to decode response: %w", err)
 	}
 
 	if len(parsed.Content) == 0 {
-		return nil, aiwf.Tokens{}, errors.New("anthropic: empty content")
+		return nil, aiwf.Tokens{}, errors.New("anthropic: empty response content")
 	}
 
-	first := parsed.Content[0]
-	if first.Type != "tool_result" || first.ToolResult == nil {
-		return nil, aiwf.Tokens{}, errors.New("anthropic: missing json tool result")
-	}
-
-	if err := validateSchema(call.OutputSchemaRef, first.ToolResult); err != nil {
-		return nil, aiwf.Tokens{}, err
-	}
-
-	raw, err := json.Marshal(first.ToolResult)
-	if err != nil {
-		return nil, aiwf.Tokens{}, err
+	content := ""
+	for _, block := range parsed.Content {
+		if block.Type == "text" {
+			content += block.Text
+		}
 	}
 
 	usage := aiwf.Tokens{
 		Prompt:     parsed.Usage.InputTokens,
 		Completion: parsed.Usage.OutputTokens,
-		Total:      parsed.Usage.TotalTokens,
+		Total:      parsed.Usage.InputTokens + parsed.Usage.OutputTokens,
 	}
 
-	return raw, usage, nil
+	return []byte(content), usage, nil
 }
 
-// CallJSONSchemaStream пока возвращает заглушку.
+// CallJSONSchemaStream не реализовано для Anthropic
 func (c *Client) CallJSONSchemaStream(ctx context.Context, call aiwf.ModelCall) (<-chan aiwf.StreamChunk, aiwf.Tokens, error) {
-	ch := make(chan aiwf.StreamChunk)
-	close(ch)
-	return ch, aiwf.Tokens{}, errors.New("anthropic: streaming not implemented")
+	return nil, aiwf.Tokens{}, errors.New("anthropic: streaming not implemented")
 }
 
-func validateSchema(schemaRef string, data any) error {
-	if schemaRef == "" {
-		return errors.New("anthropic: schema reference is required")
+// newMessageRequest создаёт HTTP запрос для Messages API.
+func (c *Client) newMessageRequest(ctx context.Context, call aiwf.ModelCall) (*http.Request, error) {
+	// Используем Payload как входные данные (уже типизированные)
+	userContent := call.UserPrompt
+	if call.Payload != nil {
+		inputJSON, err := json.Marshal(call.Payload)
+		if err != nil {
+			return nil, err
+		}
+		userContent = string(inputJSON)
 	}
-	return nil
+
+	payload := MessageRequest{
+		Model: call.Model,
+		Messages: []MessageParam{
+			{
+				Role:    "user",
+				Content: userContent,
+			},
+		},
+		System:      call.SystemPrompt,
+		MaxTokens:   2000,
+		Temperature: 0.7,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	url := c.baseURL + "/messages"
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("x-api-key", c.apiKey)
+	req.Header.Set("anthropic-version", anthropicVersion)
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
 }
 
-type requestPayload struct {
-	Model           string         `json:"model"`
-	Messages        []message      `json:"messages"`
-	MaxOutputTokens int            `json:"max_output_tokens,omitempty"`
-	Temperature     float64        `json:"temperature,omitempty"`
-	ResponseFormat  responseFormat `json:"response_format"`
+// MessageRequest - структура запроса к Anthropic Messages API
+type MessageRequest struct {
+	Model       string         `json:"model"`
+	Messages    []MessageParam `json:"messages"`
+	System      string         `json:"system,omitempty"`
+	MaxTokens   int            `json:"max_tokens"`
+	Temperature float64        `json:"temperature,omitempty"`
+	TopK        int            `json:"top_k,omitempty"`
+	TopP        float64        `json:"top_p,omitempty"`
 }
 
-type message struct {
-	Role    string         `json:"role"`
-	Content []contentBlock `json:"content"`
+// MessageParam - параметр сообщения в запросе
+type MessageParam struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
-type contentBlock struct {
-	Type       string `json:"type"`
-	Text       string `json:"text,omitempty"`
-	ToolResult any    `json:"tool_result,omitempty"`
+// Message - структура ответа от Anthropic API
+type Message struct {
+	ID           string         `json:"id"`
+	Type         string         `json:"type"`
+	Role         string         `json:"role"`
+	Content      []ContentBlock `json:"content"`
+	Model        string         `json:"model"`
+	StopReason   string         `json:"stop_reason"`
+	StopSequence string         `json:"stop_sequence"`
+	Usage        Usage          `json:"usage"`
 }
 
-type responseFormat struct {
-	Type   string           `json:"type"`
-	Schema schemaDescriptor `json:"json_schema"`
+// ContentBlock - блок контента в ответе
+type ContentBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
 }
 
-type schemaDescriptor struct {
-	Name string `json:"name"`
-}
-
-type responsePayload struct {
-	Content []contentBlock `json:"content"`
-	Usage   usagePayload   `json:"usage"`
-}
-
-type usagePayload struct {
+// Usage - информация об использованных токенах
+type Usage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
-	TotalTokens  int `json:"total_tokens"`
 }

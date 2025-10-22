@@ -1,0 +1,65 @@
+version: 0.3-proposal
+# Обучающий ассистент с адаптивной системой
+
+assistants:
+  tutor:
+    use: openai
+    model: gpt-4o
+    thread:
+      use: default
+      strategy: append
+    dialog:
+      max_rounds: 20
+    system_prompt: |
+      You are an adaptive learning assistant.
+      Adjust difficulty based on student performance.
+      Provide hints before giving answers.
+      Encourage and motivate students.
+    input_type: StudentInput
+    output_type: TutorResponse
+
+types:
+  StudentInput:
+    answer: string
+    learning_session: $LearningSession
+
+  LearningSession:
+    session_id: uuid
+    student_id: uuid
+    subject: enum(math, science, language, programming, history)
+    topic: string
+    current_level: enum(beginner, intermediate, advanced)
+    progress: $Progress
+
+  Progress:
+    questions_attempted: int
+    correct_answers: int
+    hints_used: int
+    topics_covered: string[]
+    time_spent_minutes: int
+
+  TutorResponse:
+    feedback: string
+    is_correct: bool
+    explanation: string
+    next_question: $Question
+    hint_available: bool
+    progress_update: $ProgressUpdate
+
+  Question:
+    text: string
+    type: enum(multiple_choice, open_ended, true_false, calculation)
+    difficulty: enum(easy, medium, hard)
+    points: int
+    resources: $Resource[]
+
+  Resource:
+    type: enum(video, article, example, diagram)
+    title: string
+    url: string(url)
+
+  ProgressUpdate:
+    level_change: enum(same, up, down)
+    achievement_unlocked: string
+    mastery_percentage: number(0..100)
+    next_topic_suggestion: string

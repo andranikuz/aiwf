@@ -2,6 +2,23 @@
 
 package aiwfgen
 
+// Metrics represents Metrics
+type Metrics struct {
+	ProcessedRecords int `json:"processed_records"`
+	AnomaliesDetected int `json:"anomalies_detected"`
+	ProcessingTimeMs int `json:"processing_time_ms"`
+	Accuracy float64 `json:"accuracy"`
+	TotalRecords int `json:"total_records"`
+}
+
+// VisualizationData represents VisualizationData
+type VisualizationData struct {
+	YAxis []float64 `json:"y_axis"`
+	Labels []string `json:"labels"`
+	ChartType string `json:"chart_type"`
+	XAxis []string `json:"x_axis"`
+}
+
 // CreativeWritingRequest represents CreativeWritingRequest
 type CreativeWritingRequest struct {
 	Prompt string `json:"prompt"`
@@ -12,20 +29,20 @@ type CreativeWritingRequest struct {
 
 // CustomerQuery represents CustomerQuery
 type CustomerQuery struct {
-	Urgency string `json:"urgency"`
 	CustomerId string `json:"customer_id"`
 	Message string `json:"message"`
 	Category string `json:"category"`
+	Urgency string `json:"urgency"`
 }
 
 // SupportResponse represents SupportResponse
 type SupportResponse struct {
-	Reply string `json:"reply"`
-	Resolved bool `json:"resolved"`
-	FollowupNeeded bool `json:"followup_needed"`
 	TicketId string `json:"ticket_id"`
 	NextSteps []string `json:"next_steps"`
 	SatisfactionPredicted float64 `json:"satisfaction_predicted"`
+	Reply string `json:"reply"`
+	Resolved bool `json:"resolved"`
+	FollowupNeeded bool `json:"followup_needed"`
 }
 
 // DataAnalysisRequest represents DataAnalysisRequest
@@ -39,40 +56,35 @@ type DataAnalysisRequest struct {
 
 // DataAnalysisResult represents DataAnalysisResult
 type DataAnalysisResult struct {
-	Findings []*Finding `json:"findings"`
 	Metrics *Metrics `json:"metrics"`
 	Recommendations []string `json:"recommendations"`
 	ConfidenceScore float64 `json:"confidence_score"`
 	VisualizationData *VisualizationData `json:"visualization_data"`
 	Summary string `json:"summary"`
+	Findings []*Finding `json:"findings"`
 }
 
 // Finding represents Finding
 type Finding struct {
+	Evidence []string `json:"evidence"`
 	Title string `json:"title"`
 	Description string `json:"description"`
 	Importance string `json:"importance"`
-	Evidence []string `json:"evidence"`
-}
-
-// Metrics represents Metrics
-type Metrics struct {
-	TotalRecords int `json:"total_records"`
-	ProcessedRecords int `json:"processed_records"`
-	AnomaliesDetected int `json:"anomalies_detected"`
-	ProcessingTimeMs int `json:"processing_time_ms"`
-	Accuracy float64 `json:"accuracy"`
-}
-
-// VisualizationData represents VisualizationData
-type VisualizationData struct {
-	ChartType string `json:"chart_type"`
-	XAxis []string `json:"x_axis"`
-	YAxis []float64 `json:"y_axis"`
-	Labels []string `json:"labels"`
 }
 
 // ============ VALIDATORS ============
+
+// ValidateVisualizationData validates VisualizationData
+func ValidateVisualizationData(v *VisualizationData) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateCreativeWritingRequest validates CreativeWritingRequest
+func ValidateCreativeWritingRequest(v *CreativeWritingRequest) error {
+	// No validation rules
+	return nil
+}
 
 // ValidateCustomerQuery validates CustomerQuery
 func ValidateCustomerQuery(v *CustomerQuery) error {
@@ -110,57 +122,13 @@ func ValidateMetrics(v *Metrics) error {
 	return nil
 }
 
-// ValidateVisualizationData validates VisualizationData
-func ValidateVisualizationData(v *VisualizationData) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateCreativeWritingRequest validates CreativeWritingRequest
-func ValidateCreativeWritingRequest(v *CreativeWritingRequest) error {
-	// No validation rules
-	return nil
-}
-
 // ============ TYPE METADATA ============
 
 // TypeMetadata exports type definitions for providers
 var TypeMetadata = map[string]interface{}{
-	"Metrics": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"accuracy": map[string]interface{}{
-		"type": "number",
-	},
-			"total_records": map[string]interface{}{
-		"type": "integer",
-	},
-			"processed_records": map[string]interface{}{
-		"type": "integer",
-	},
-			"anomalies_detected": map[string]interface{}{
-		"type": "integer",
-	},
-			"processing_time_ms": map[string]interface{}{
-		"type": "integer",
-	},
-		},
-		"required": []string{"accuracy", "total_records", "processed_records", "anomalies_detected", "processing_time_ms"},
-		"additionalProperties": false,
-	},
 	"VisualizationData": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"chart_type": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"bar", "line", "pie", "scatter", "heatmap"},
-	},
-			"x_axis": map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-		"type": "string",
-	},
-	},
 			"y_axis": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
@@ -173,13 +141,26 @@ var TypeMetadata = map[string]interface{}{
 		"type": "string",
 	},
 	},
+			"chart_type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"bar", "line", "pie", "scatter", "heatmap"},
+	},
+			"x_axis": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
 		},
-		"required": []string{"chart_type", "x_axis", "y_axis", "labels"},
+		"required": []string{"y_axis", "labels", "chart_type", "x_axis"},
 		"additionalProperties": false,
 	},
 	"CreativeWritingRequest": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
+			"prompt": map[string]interface{}{
+		"type": "string",
+	},
 			"style": map[string]interface{}{
 		"type": "string",
 		"enum": []string{"poetic", "narrative", "descriptive", "persuasive", "humorous"},
@@ -191,23 +172,13 @@ var TypeMetadata = map[string]interface{}{
 		"type": "string",
 		"enum": []string{"formal", "informal", "friendly", "professional", "dramatic"},
 	},
-			"prompt": map[string]interface{}{
-		"type": "string",
-	},
 		},
-		"required": []string{"style", "word_count", "tone", "prompt"},
+		"required": []string{"prompt", "style", "word_count", "tone"},
 		"additionalProperties": false,
 	},
 	"CustomerQuery": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"message": map[string]interface{}{
-		"type": "string",
-	},
-			"category": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"technical", "billing", "general", "complaint", "feedback"},
-	},
 			"urgency": map[string]interface{}{
 		"type": "string",
 		"enum": []string{"low", "medium", "high"},
@@ -215,22 +186,20 @@ var TypeMetadata = map[string]interface{}{
 			"customer_id": map[string]interface{}{
 		"type": "string",
 	},
+			"message": map[string]interface{}{
+		"type": "string",
+	},
+			"category": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"technical", "billing", "general", "complaint", "feedback"},
+	},
 		},
-		"required": []string{"message", "category", "urgency", "customer_id"},
+		"required": []string{"urgency", "customer_id", "message", "category"},
 		"additionalProperties": false,
 	},
 	"SupportResponse": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"reply": map[string]interface{}{
-		"type": "string",
-	},
-			"resolved": map[string]interface{}{
-		"type": "boolean",
-	},
-			"followup_needed": map[string]interface{}{
-		"type": "boolean",
-	},
 			"ticket_id": map[string]interface{}{
 		"type": "string",
 	},
@@ -243,8 +212,17 @@ var TypeMetadata = map[string]interface{}{
 			"satisfaction_predicted": map[string]interface{}{
 		"type": "number",
 	},
+			"reply": map[string]interface{}{
+		"type": "string",
+	},
+			"resolved": map[string]interface{}{
+		"type": "boolean",
+	},
+			"followup_needed": map[string]interface{}{
+		"type": "boolean",
+	},
 		},
-		"required": []string{"reply", "resolved", "followup_needed", "ticket_id", "next_steps", "satisfaction_predicted"},
+		"required": []string{"ticket_id", "next_steps", "satisfaction_predicted", "reply", "resolved", "followup_needed"},
 		"additionalProperties": false,
 	},
 	"DataAnalysisRequest": map[string]interface{}{
@@ -333,16 +311,6 @@ var TypeMetadata = map[string]interface{}{
 			"visualization_data": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"chart_type": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"bar", "line", "pie", "scatter", "heatmap"},
-	},
-			"x_axis": map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-		"type": "string",
-	},
-	},
 			"y_axis": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
@@ -355,8 +323,18 @@ var TypeMetadata = map[string]interface{}{
 		"type": "string",
 	},
 	},
+			"chart_type": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"bar", "line", "pie", "scatter", "heatmap"},
+	},
+			"x_axis": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "string",
+	},
+	},
 		},
-		"required": []string{"chart_type", "x_axis", "y_axis", "labels"},
+		"required": []string{"y_axis", "labels", "chart_type", "x_axis"},
 		"additionalProperties": false,
 	},
 			"summary": map[string]interface{}{
@@ -369,13 +347,6 @@ var TypeMetadata = map[string]interface{}{
 	"Finding": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"description": map[string]interface{}{
-		"type": "string",
-	},
-			"importance": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"low", "medium", "high", "critical"},
-	},
 			"evidence": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
@@ -385,8 +356,37 @@ var TypeMetadata = map[string]interface{}{
 			"title": map[string]interface{}{
 		"type": "string",
 	},
+			"description": map[string]interface{}{
+		"type": "string",
+	},
+			"importance": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"low", "medium", "high", "critical"},
+	},
 		},
-		"required": []string{"description", "importance", "evidence", "title"},
+		"required": []string{"evidence", "title", "description", "importance"},
+		"additionalProperties": false,
+	},
+	"Metrics": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"processed_records": map[string]interface{}{
+		"type": "integer",
+	},
+			"anomalies_detected": map[string]interface{}{
+		"type": "integer",
+	},
+			"processing_time_ms": map[string]interface{}{
+		"type": "integer",
+	},
+			"accuracy": map[string]interface{}{
+		"type": "number",
+	},
+			"total_records": map[string]interface{}{
+		"type": "integer",
+	},
+		},
+		"required": []string{"processed_records", "anomalies_detected", "processing_time_ms", "accuracy", "total_records"},
 		"additionalProperties": false,
 	},
 }

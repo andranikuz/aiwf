@@ -7,29 +7,49 @@ import (
 	"os"
 
 	sdk "github.com/andranikuz/aiwf/examples/generated"
+	"github.com/andranikuz/aiwf/providers/grok"
 	"github.com/andranikuz/aiwf/providers/openai"
 )
 
 func main() {
-	// Check for OpenAI API key
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
+	// Check for required API keys
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+	grokKey := os.Getenv("GROK_API_KEY")
+
+	if openaiKey == "" {
 		log.Fatal("OPENAI_API_KEY environment variable is required")
 	}
-
-	// Initialize OpenAI client
-	config := openai.ClientConfig{
-		APIKey:  apiKey,
-		BaseURL: "https://api.openai.com/v1",
+	if grokKey == "" {
+		log.Fatal("GROK_API_KEY environment variable is required")
 	}
-	provider, _ := openai.NewClient(config)
 
-	// Create service with all agents
-	service := sdk.NewService(provider)
+	fmt.Println("=== AIWF Example: Multi-Provider Agents ===\n")
+	fmt.Println("Using OpenAI for structured analysis and customer support")
+	fmt.Println("Using Grok for creative text generation\n")
 
-	// Optional: Setup thread manager for conversational agent
-	// In real usage, use: threadManager := aiwf.NewInMemoryThreadManager()
-	// service.WithThreadManager(threadManager)
+	// Initialize OpenAI provider (for structured outputs and conversations)
+	openaiConfig := openai.ClientConfig{
+		APIKey: openaiKey,
+	}
+	openaiProvider, err := openai.NewClient(openaiConfig)
+	if err != nil {
+		log.Fatalf("Failed to initialize OpenAI: %v", err)
+	}
+
+	// Initialize Grok provider (for text generation)
+	grokConfig := grok.ClientConfig{
+		APIKey: grokKey,
+	}
+	grokProvider, err := grok.NewClient(grokConfig)
+	if err != nil {
+		log.Fatalf("Failed to initialize Grok: %v", err)
+	}
+
+	// Create service for OpenAI (Data Analyst + Customer Support)
+	openaiService := sdk.NewService(openaiProvider)
+
+	// Create separate service for Grok (Creative Writer)
+	grokService := sdk.NewService(grokProvider)
 
 	ctx := context.Background()
 
@@ -52,7 +72,7 @@ func main() {
 		ConfidenceThreshold:  0.75,
 	}
 
-	dataResult, trace, err := service.Agents().DataAnalyst.Run(ctx, dataRequest)
+	dataResult, trace, err := openaiService.Agents().DataAnalyst.Run(ctx, dataRequest)
 	if err != nil {
 		log.Printf("Data analysis error: %v\n", err)
 	} else {
@@ -82,7 +102,8 @@ func main() {
 	}
 
 	// Creative writer returns plain string (no structured output)
-	creativeText, trace, err := service.Agents().CreativeWriter.Run(ctx, writingRequest)
+	// Using Grok provider for creative writing
+	creativeText, trace, err := grokService.Agents().CreativeWriter.Run(ctx, writingRequest)
 	if err != nil {
 		log.Printf("Creative writing error: %v\n", err)
 	} else {
@@ -111,8 +132,8 @@ func main() {
 	// threadID := "support-session-" + query1.CustomerId
 	// In real usage: thread := threadManager.GetOrCreateThread(ctx, threadID)
 
-	// First interaction (simplified without thread manager)
-	response1, trace, err := service.Agents().CustomerSupport.Run(ctx, query1)
+	// First interaction using OpenAI provider
+	response1, trace, err := openaiService.Agents().CustomerSupport.Run(ctx, query1)
 	if err != nil {
 		log.Printf("Support error: %v\n", err)
 	} else {
@@ -132,8 +153,8 @@ func main() {
 		CustomerId: "CUST-12345",
 	}
 
-	// Continue conversation (simplified without thread context)
-	response2, _, err := service.Agents().CustomerSupport.Run(ctx, query2)
+	// Continue conversation using OpenAI provider
+	response2, _, err := openaiService.Agents().CustomerSupport.Run(ctx, query2)
 	if err != nil {
 		log.Printf("Support follow-up error: %v\n", err)
 	} else {
@@ -146,7 +167,7 @@ func main() {
 	}
 
 	// Example of using dialog mode (if max_rounds > 1)
-	if service.Agents().CustomerSupport.ThreadBinding() != nil {
+	if openaiService.Agents().CustomerSupport.ThreadBinding() != nil {
 		fmt.Println("\n[Thread-aware agent maintains conversation context across interactions]")
 	}
 

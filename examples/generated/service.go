@@ -23,17 +23,17 @@ func NewService(client aiwf.ModelClient) *Service {
 	}
 
 	// Initialize agents
-	customer_supportAgent := NewCustomerSupportAgent(client)
-	customer_supportAgent.Types = s // Inject TypeProvider
 	data_analystAgent := NewDataAnalystAgent(client)
 	data_analystAgent.Types = s // Inject TypeProvider
 	creative_writerAgent := NewCreativeWriterAgent(client)
 	creative_writerAgent.Types = s // Inject TypeProvider
+	customer_supportAgent := NewCustomerSupportAgent(client)
+	customer_supportAgent.Types = s // Inject TypeProvider
 
 	s.agents = &Agents{
+		CreativeWriter: creative_writerAgent,
 		CustomerSupport: customer_supportAgent,
 		DataAnalyst: data_analystAgent,
-		CreativeWriter: creative_writerAgent,
 	}
 
 	return s
@@ -83,12 +83,12 @@ func (s *Service) GetInputTypeFor(agentName string) (string, any, error) {
 // GetOutputTypeFor returns output type for an agent
 func (s *Service) GetOutputTypeFor(agentName string) (string, any, error) {
 	switch agentName {
-	case "customer_support":
-		return "SupportResponse", TypeMetadata["SupportResponse"], nil
 	case "data_analyst":
 		return "DataAnalysisResult", TypeMetadata["DataAnalysisResult"], nil
 	case "creative_writer":
 		return "string", TypeMetadata["string"], nil
+	case "customer_support":
+		return "SupportResponse", TypeMetadata["SupportResponse"], nil
 	default:
 		return "", nil, fmt.Errorf("agent %s not found", agentName)
 	}

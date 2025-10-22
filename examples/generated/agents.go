@@ -12,56 +12,10 @@ import (
 
 // Agents contains all generated agents
 type Agents struct {
-	CustomerSupport *CustomerSupportAgent
 	DataAnalyst *DataAnalystAgent
 	CreativeWriter *CreativeWriterAgent
+	CustomerSupport *CustomerSupportAgent
 }
-
-// DataAnalystAgent represents the data_analyst agent
-type DataAnalystAgent struct {
-	aiwf.AgentBase
-}
-
-// NewDataAnalystAgent creates a new data_analyst agent
-func NewDataAnalystAgent(client aiwf.ModelClient) *DataAnalystAgent {
-	return &DataAnalystAgent{
-		AgentBase: aiwf.AgentBase{
-			Config: aiwf.AgentConfig{
-				Name:           "data_analyst",
-				Model:          "gpt-4o-mini",
-				SystemPrompt:   `You are an expert data analyst. Analyze the provided dataset and query\nto extract meaningful insights. Provide structured analysis with clear\nfindings, metrics, and visualization suggestions. Be precise and\ndata-driven in your analysis.\n`,
-				InputTypeName:  "DataAnalysisRequest",
-				OutputTypeName: "DataAnalysisResult",
-				MaxTokens:      2000,
-				Temperature:    0.7,
-			},
-			Client: client,
-		},
-	}
-}
-
-// Run executes the data_analyst agent
-func (a *DataAnalystAgent) Run(ctx context.Context, input DataAnalysisRequest) (*DataAnalysisResult, *aiwf.Trace, error) {
-	// Validate input
-	if err := ValidateDataAnalysisRequest(&input); err != nil {
-		return nil, nil, fmt.Errorf("validation failed: %w", err)
-	}
-
-	// Call model
-	result, trace, err := a.CallModel(ctx, input, nil)
-	if err != nil {
-		return nil, trace, err
-	}
-
-	// Parse response
-	var output DataAnalysisResult
-	if err := json.Unmarshal(result, &output); err != nil {
-		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &output, trace, nil
-}
-
 
 // CreativeWriterAgent represents the creative_writer agent
 type CreativeWriterAgent struct {
@@ -74,7 +28,7 @@ func NewCreativeWriterAgent(client aiwf.ModelClient) *CreativeWriterAgent {
 		AgentBase: aiwf.AgentBase{
 			Config: aiwf.AgentConfig{
 				Name:           "creative_writer",
-				Model:          "gpt-3.5-turbo",
+				Model:          "grok-beta",
 				SystemPrompt:   `You are a creative writer with expertise in various writing styles.\nGenerate engaging, original content based on the given prompt.\nFocus on creativity, flow, and adherence to the requested style.\nReturn plain text without any JSON formatting or structure.\n`,
 				InputTypeName:  "CreativeWritingRequest",
 				OutputTypeName: "string",
@@ -183,6 +137,52 @@ func (a *CustomerSupportAgent) ThreadBinding() *aiwf.ThreadBinding {
 func (a *CustomerSupportAgent) RunDialog(ctx context.Context, input CustomerQuery, thread *aiwf.ThreadState, maxRounds int) (*SupportResponse, *aiwf.Trace, error) {
 	// TODO: Implement dialog logic
 	return a.RunWithThread(ctx, input, thread)
+}
+
+
+// DataAnalystAgent represents the data_analyst agent
+type DataAnalystAgent struct {
+	aiwf.AgentBase
+}
+
+// NewDataAnalystAgent creates a new data_analyst agent
+func NewDataAnalystAgent(client aiwf.ModelClient) *DataAnalystAgent {
+	return &DataAnalystAgent{
+		AgentBase: aiwf.AgentBase{
+			Config: aiwf.AgentConfig{
+				Name:           "data_analyst",
+				Model:          "gpt-4o-mini",
+				SystemPrompt:   `You are an expert data analyst. Analyze the provided dataset and query\nto extract meaningful insights. Provide structured analysis with clear\nfindings, metrics, and visualization suggestions. Be precise and\ndata-driven in your analysis.\n`,
+				InputTypeName:  "DataAnalysisRequest",
+				OutputTypeName: "DataAnalysisResult",
+				MaxTokens:      2000,
+				Temperature:    0.7,
+			},
+			Client: client,
+		},
+	}
+}
+
+// Run executes the data_analyst agent
+func (a *DataAnalystAgent) Run(ctx context.Context, input DataAnalysisRequest) (*DataAnalysisResult, *aiwf.Trace, error) {
+	// Validate input
+	if err := ValidateDataAnalysisRequest(&input); err != nil {
+		return nil, nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Call model
+	result, trace, err := a.CallModel(ctx, input, nil)
+	if err != nil {
+		return nil, trace, err
+	}
+
+	// Parse response
+	var output DataAnalysisResult
+	if err := json.Unmarshal(result, &output); err != nil {
+		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &output, trace, nil
 }
 
 

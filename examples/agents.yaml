@@ -88,10 +88,10 @@ assistants:
     input_type: DataAnalysisRequest
     output_type: DataAnalysisResult
 
-  # 2. Simple text output agent - Creative Writer (no output_type specified)
+  # 2. Simple text output agent - Creative Writer using Grok (no output_type specified)
   creative_writer:
-    use: openai
-    model: gpt-3.5-turbo
+    use: grok
+    model: grok-beta
     system_prompt: |
       You are a creative writer with expertise in various writing styles.
       Generate engaging, original content based on the given prompt.

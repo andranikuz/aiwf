@@ -61,17 +61,6 @@ func ResolveSpec(spec *Spec) error {
 		}
 	}
 
-	// Validate workflow steps that use dialog
-	if spec.Workflows != nil {
-		for wfName, workflow := range spec.Workflows {
-			for _, dagStep := range workflow.DAG {
-				if dagStep.Dialog != nil && dagStep.Thread == nil {
-					return fmt.Errorf("workflow %s step %s: dialog mode requires thread configuration (add 'thread' field)", wfName, dagStep.Step)
-				}
-			}
-		}
-	}
-
 	return nil
 }
 

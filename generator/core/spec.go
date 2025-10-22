@@ -7,7 +7,6 @@ type Spec struct {
 	Types      map[string]interface{}   `yaml:"types"`
 	Threads    map[string]ThreadSpec    `yaml:"threads"`
 	Assistants map[string]AssistantSpec `yaml:"assistants"`
-	Workflows  map[string]WorkflowSpec  `yaml:"workflows"`
 	Resolved   SpecResolution           `yaml:"-"`
 }
 
@@ -62,50 +61,6 @@ type DialogSpec struct {
 	MaxRounds int `yaml:"max_rounds"`
 }
 
-// ApprovalSpec описывает расширенные правила проверки.
-type ApprovalSpec struct {
-	Review               map[string]any `yaml:"review"`
-	RequireForRetry      bool           `yaml:"require_for_retry"`
-	MaxRetries           int            `yaml:"max_retries"`
-	OnApprove            map[string]any `yaml:"on_approve"`
-	OnReject             map[string]any `yaml:"on_reject"`
-	FeedbackTemplate     string         `yaml:"feedback_template"`
-	AutoContinueOnApprove *bool         `yaml:"auto_continue_on_approve"`
-}
-
-// NextStepSpec описывает переход к следующему шагу.
-type NextStepSpec struct {
-	Step             string         `yaml:"step"`
-	InputBinding     map[string]any `yaml:"input_binding"`
-	InputContractRef string         `yaml:"input_contract_ref"`
-}
-
-// WorkflowSpec описывает workflow.
-type WorkflowSpec struct {
-	Description string        `yaml:"description"`
-	DAG         []WorkflowDAG `yaml:"dag"`
-	Thread      *ThreadBindingSpec `yaml:"thread"`
-}
-
-// WorkflowDAG описывает шаг воркфлоу.
-type WorkflowDAG struct {
-	Step         string         `yaml:"step"`
-	Assistant    string         `yaml:"assistant"`
-	Needs        []string       `yaml:"needs"`
-	Scatter      *ScatterSpec   `yaml:"scatter"`
-	InputBinding map[string]any `yaml:"input_binding"`
-	Thread       *ThreadBindingSpec `yaml:"thread"`
-	Dialog       *DialogSpec        `yaml:"dialog"`
-	Approval     *ApprovalSpec      `yaml:"approval"`
-	Next         *NextStepSpec      `yaml:"next"`
-}
-
-// ScatterSpec описывает fan-out шаг.
-type ScatterSpec struct {
-	From        string `yaml:"from"`
-	As          string `yaml:"as"`
-	Concurrency int    `yaml:"concurrency"`
-}
 
 // ValidationError описывает ошибку загрузки.
 type ValidationError struct {

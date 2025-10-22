@@ -38,7 +38,7 @@ func NewCommand() *cobra.Command {
 				}
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ YAML валиден. Assistants: %d, Workflows: %d\n", len(ir.Assistants), len(ir.Workflows))
+			fmt.Fprintf(cmd.OutOrStdout(), "✓ YAML валиден. Assistants: %d\n", len(ir.Assistants))
 			return nil
 		},
 	}

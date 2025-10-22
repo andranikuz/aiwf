@@ -7,7 +7,6 @@
 ```
 templates/
 ├── assistant/     # Простые ассистенты для одношаговых задач
-├── workflow/      # Многошаговые воркфлоу
 └── dialog/        # Диалоговые системы с несколькими раундами
 ```
 
@@ -32,12 +31,6 @@ templates/
 - **text_classifier.yaml** - Классификация текстов по категориям
 - **code_reviewer.yaml** - Анализ и ревью кода
 - **translator.yaml** - Перевод с валидацией качества
-
-### Workflow Templates
-
-- **content_pipeline.yaml** - Полный цикл создания контента (план → черновик → редактура)
-- **data_analyst.yaml** - Анализ данных с несколькими этапами обработки
-- **research_assistant.yaml** - Исследование темы с синтезом информации
 
 ### Dialog Templates
 

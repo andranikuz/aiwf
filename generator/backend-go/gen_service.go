@@ -34,18 +34,12 @@ func (g *ServiceGenerator) Generate(packageName string) (string, error) {
 	b.WriteString(")\n\n")
 
 	// Service struct
-	b.WriteString("// Service provides access to all agents and workflows\n")
+	b.WriteString("// Service provides access to all agents\n")
 	b.WriteString("type Service struct {\n")
 	b.WriteString("\tclient        aiwf.ModelClient\n")
 	b.WriteString("\tthreadManager aiwf.ThreadManager\n")
 	b.WriteString("\tartifactStore aiwf.ArtifactStore\n")
 	b.WriteString("\tagents        *Agents\n")
-
-	// Добавляем поля для воркфлоу если есть
-	if len(g.ir.Workflows) > 0 {
-		b.WriteString("\tworkflows     map[string]aiwf.Workflow[any, any]\n")
-	}
-
 	b.WriteString("}\n\n")
 
 	// Constructor
@@ -90,16 +84,6 @@ func (g *ServiceGenerator) Generate(packageName string) (string, error) {
 		}
 	}
 	b.WriteString("\n")
-
-	// Инициализируем воркфлоу если есть
-	if len(g.ir.Workflows) > 0 {
-		b.WriteString("\t// Initialize workflows\n")
-		b.WriteString("\ts.workflows = make(map[string]aiwf.Workflow[any, any])\n")
-		for name := range g.ir.Workflows {
-			b.WriteString(fmt.Sprintf("\t// TODO: Initialize %s workflow\n", name))
-		}
-		b.WriteString("\n")
-	}
 
 	b.WriteString("\treturn s\n")
 	b.WriteString("}\n\n")

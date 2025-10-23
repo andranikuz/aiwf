@@ -15,7 +15,7 @@ import (
 
 const (
 	defaultBaseURL = "https://api.anthropic.com/v1"
-	anthropicVersion = "2023-06-01"
+	anthropicVersion = "2024-06-01"
 )
 
 // ClientConfig определяет параметры доступа к Anthropic API.
@@ -131,6 +131,16 @@ func (c *Client) newMessageRequest(ctx context.Context, call aiwf.ModelCall) (*h
 		userContent = string(inputJSON)
 	}
 
+	maxTokens := call.MaxTokens
+	if maxTokens == 0 {
+		maxTokens = 2000
+	}
+
+	temperature := call.Temperature
+	if temperature == 0 {
+		temperature = 0.7
+	}
+
 	payload := MessageRequest{
 		Model: call.Model,
 		Messages: []MessageParam{
@@ -140,8 +150,8 @@ func (c *Client) newMessageRequest(ctx context.Context, call aiwf.ModelCall) (*h
 			},
 		},
 		System:      call.SystemPrompt,
-		MaxTokens:   2000,
-		Temperature: 0.7,
+		MaxTokens:   maxTokens,
+		Temperature: temperature,
 	}
 
 	body, err := json.Marshal(payload)

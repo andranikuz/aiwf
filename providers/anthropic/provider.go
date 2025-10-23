@@ -15,7 +15,7 @@ import (
 
 const (
 	defaultBaseURL   = "https://api.anthropic.com/v1"
-	anthropicVersion = "2024-10-01"
+	anthropicVersion = "2023-06-01"
 )
 
 // ClientConfig определяет параметры доступа к Anthropic API.

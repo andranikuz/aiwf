@@ -279,10 +279,11 @@ func (g *Generator) generateAgentMethod(b *strings.Builder, agentName string, ag
 
 	b.WriteString(fmt.Sprintf("        $response = $this->request('/agent/%s', $data);\n\n", agentName))
 
+	// Extract data from server response envelope: {"data": ..., "trace": ...}
 	if outputIsPrimitive {
-		b.WriteString("        return $response['output'] ?? $response['result'] ?? '';\n")
+		b.WriteString("        return $response['data'] ?? $response['output'] ?? $response['result'] ?? '';\n")
 	} else {
-		b.WriteString(fmt.Sprintf("        return %s::fromArray($response);\n", outputTypeName))
+		b.WriteString(fmt.Sprintf("        return %s::fromArray($response['data']);\n", outputTypeName))
 	}
 
 	b.WriteString("    }\n\n")

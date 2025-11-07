@@ -61,6 +61,9 @@ func ResolveSpec(spec *Spec) error {
 		if assistant.Dialog != nil && assistant.Thread == nil {
 			return fmt.Errorf("assistant %s: dialog mode requires thread configuration (add 'thread' field)", name)
 		}
+
+		// Update the assistant in the map with resolved types
+		spec.Assistants[name] = assistant
 	}
 
 	return nil

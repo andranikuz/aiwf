@@ -7,6 +7,7 @@ AIWF — фреймворк для построения типобезопасн
 ## Возможности
 
 - **Генерация типобезопасного SDK** из YAML-спецификаций
+- **HTTP API сервер** - мгновенное развертывание агентов как REST API (NEW!)
 - **Упрощённая система типов** с ограничениями (`string(1..100)`, `enum(...)` и т.д.)
 - **Мульти-агенты** со структурированными входами/выходами
 - **3 встроенных провайдера**: OpenAI, Grok (xAI), Anthropic (Claude)
@@ -33,6 +34,9 @@ aiwf validate -f config.yaml
 
 # Генерация SDK
 aiwf sdk -f config.yaml -o ./generated
+
+# Запуск HTTP API сервера (NEW!)
+aiwf serve -f config.yaml
 ```
 
 ### Пример YAML-конфигурации
@@ -70,6 +74,8 @@ assistants:
 
 ## Документация
 
+- [Getting Started Guide](./docs/GETTING_STARTED.md) - Руководство для начинающих
+- [HTTP Server Guide](./docs/SERVE_GUIDE.md) - Развертывание агентов как REST API
 - [Документация генератора](./generator/README.md) - YAML-спецификация и система типов
 - [Документация runtime](./runtime/README.md) - Runtime-контракты и интерфейсы
 - [Документация провайдеров](./providers/README.md) - Руководство по реализации провайдеров
@@ -77,11 +83,19 @@ assistants:
 
 ## Полные примеры
 
-Смотрите директорию `examples/` для полностью работающих примеров:
+### SDK Examples (`examples/`)
 
 - **DataAnalyst** - Структурированный анализ данных (сложные типы)
 - **CreativeWriter** - Генерация текста (простой строковый вывод)
 - **CustomerSupport** - Многораундный диалог с контекстом (threads)
+
+### Templates (`templates/`)
+
+- **api-server** - Полноценный REST API сервер с 4 AI агентами ([README](./templates/api-server/README.md))
+  - Текстовый анализ (sentiment, summary, keywords)
+  - Перевод между 7 языками
+  - Генерация контента
+  - Q&A система
 
 Примеры используют OpenAI и Grok провайдеры - см. `.env.example` для настройки.
 

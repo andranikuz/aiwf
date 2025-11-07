@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/andranikuz/aiwf/cmd/aiwf/sdk"
+	"github.com/andranikuz/aiwf/cmd/aiwf/serve"
 	"github.com/andranikuz/aiwf/cmd/aiwf/validate"
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,7 @@ func newRootCmd() *cobra.Command {
 
 	cmd.AddCommand(validate.NewCommand())
 	cmd.AddCommand(sdk.NewCommand())
+	cmd.AddCommand(serve.NewCommand())
 
 	return cmd
 }

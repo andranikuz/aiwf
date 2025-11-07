@@ -34,38 +34,10 @@ func NewCommand() *cobra.Command {
 				fmt.Fprintln(cmd.ErrOrStderr(), err)
 				return err
 			}
-			if pkg == "" {
-				pkg = "aiwfgen"
-			}
 
-			spec, err := core.LoadSpec(file)
-			if err != nil {
+			if err := GenerateSDK(file, outDir, pkg); err != nil {
 				fmt.Fprintln(cmd.ErrOrStderr(), validate.FormatError(err))
-				if _, ok := err.(*core.MultiError); ok {
-					return err
-				}
 				return err
-			}
-
-			ir, err := core.BuildIR(spec)
-			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), validate.FormatError(err))
-				if me, ok := err.(*core.MultiError); ok && !me.HasErrors() {
-					// только предупреждения — продолжаем.
-				} else {
-					return err
-				}
-			}
-
-			files, err := backendgo.Generate(ir, backendgo.Options{Package: pkg, OutputDir: outDir})
-			if err != nil {
-				return err
-			}
-
-			for path, data := range files {
-				if err := writeFile(path, data); err != nil {
-					return err
-				}
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "✓ SDK сгенерирован в %s\n", outDir)
@@ -78,6 +50,49 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkg, "package", "aiwfgen", "Имя Go-пакета")
 
 	return cmd
+}
+
+// GenerateSDK генерирует SDK из конфигурации (публичная функция для serve команды)
+func GenerateSDK(file, outDir, pkg string) error {
+	return GenerateSDKWithOptions(file, outDir, pkg, false)
+}
+
+// GenerateSDKWithOptions генерирует SDK с дополнительными опциями
+func GenerateSDKWithOptions(file, outDir, pkg string, generateServer bool) error {
+	if pkg == "" {
+		pkg = "aiwfgen"
+	}
+
+	spec, err := core.LoadSpec(file)
+	if err != nil {
+		return err
+	}
+
+	ir, err := core.BuildIR(spec)
+	if err != nil {
+		if me, ok := err.(*core.MultiError); ok && !me.HasErrors() {
+			// только предупреждения — продолжаем.
+		} else {
+			return err
+		}
+	}
+
+	files, err := backendgo.Generate(ir, backendgo.Options{
+		Package:        pkg,
+		OutputDir:      outDir,
+		GenerateServer: generateServer,
+	})
+	if err != nil {
+		return err
+	}
+
+	for path, data := range files {
+		if err := writeFile(path, data); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func writeFile(path string, data []byte) error {

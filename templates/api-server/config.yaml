@@ -1,0 +1,120 @@
+version: 0.3
+
+# API Server Example - REST API для AI агентов
+#
+# Этот пример демонстрирует, как создать HTTP API сервер
+# с несколькими AI агентами доступными через REST endpoints
+
+types:
+  # Типы для текстового анализа
+  TextAnalysisRequest:
+    text: string(1..5000)
+    analysis_type: enum(sentiment, summary, keywords, language)
+
+  TextAnalysisResult:
+    analysis_type: string
+    result: string
+    confidence: number(0.0..1.0)
+    metadata: map(string, any)
+
+  # Типы для перевода
+  TranslationRequest:
+    text: string(1..2000)
+    source_lang: enum(en, es, fr, de, ru, zh, ja, ru)
+    target_lang: enum(en, es, fr, de, ru, zh, ja, ru)
+
+  TranslationResult:
+    original_text: string
+    translated_text: string
+    source_lang: string
+    target_lang: string
+    confidence: number(0.0..1.0)
+
+  # Типы для генерации контента
+  ContentGenerationRequest:
+    prompt: string(10..1000)
+    style: enum(professional, casual, creative, technical, marketing)
+    length: enum(short, medium, long)
+    topic: string(1..100)
+
+  ContentGenerationResult:
+    content: string
+    word_count: int
+    style_used: string
+
+  # Типы для вопрос-ответ
+  QuestionRequest:
+    question: string(5..500)
+    context: string
+    max_answer_length: int(10..500)
+
+  AnswerResult:
+    answer: string
+    confidence: number(0.0..1.0)
+    sources: string[]
+
+assistants:
+  # 1. Текстовый анализатор
+  text_analyzer:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: |
+      You are an expert text analyst. Analyze the provided text based on the requested analysis type:
+      - sentiment: Determine if the text is positive, negative, or neutral
+      - summary: Provide a concise summary
+      - keywords: Extract key terms and phrases
+      - language: Identify the language and provide insights
+
+      Return structured analysis with confidence scores.
+    input_type: TextAnalysisRequest
+    output_type: TextAnalysisResult
+    max_tokens: 1000
+    temperature: 0.3
+
+  # 2. Переводчик
+  translator:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: |
+      You are a professional translator. Translate the text accurately while preserving:
+      - Original meaning and tone
+      - Cultural context
+      - Idiomatic expressions
+
+      Provide confidence scores based on translation quality.
+    input_type: TranslationRequest
+    output_type: TranslationResult
+    max_tokens: 2000
+    temperature: 0.2
+
+  # 3. Генератор контента
+  content_generator:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: |
+      You are a skilled content writer. Generate high-quality content based on:
+      - The given prompt and topic
+      - The requested style (professional, casual, creative, etc.)
+      - The desired length
+
+      Create engaging, well-structured content that matches the requirements.
+    input_type: ContentGenerationRequest
+    output_type: ContentGenerationResult
+    max_tokens: 2000
+    temperature: 0.8
+
+  # 4. Вопрос-ответ система
+  qa_system:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: |
+      You are a knowledgeable Q&A assistant. Answer questions based on:
+      - The provided context
+      - Your general knowledge
+      - The requested answer length
+
+      Provide accurate, well-sourced answers with confidence scores.
+    input_type: QuestionRequest
+    output_type: AnswerResult
+    max_tokens: 1000
+    temperature: 0.4

@@ -29,13 +29,16 @@ go install ./cmd/aiwf
 ### Использование CLI
 
 ```bash
+# Генерация конфигурации из описания задачи (NEW!)
+aiwf generate --interactive
+
 # Валидация YAML-конфигурации
 aiwf validate -f config.yaml
 
 # Генерация SDK
 aiwf sdk -f config.yaml -o ./generated
 
-# Запуск HTTP API сервера (NEW!)
+# Запуск HTTP API сервера
 aiwf serve -f config.yaml
 ```
 
@@ -75,6 +78,7 @@ assistants:
 ## Документация
 
 - [Getting Started Guide](./docs/GETTING_STARTED.md) - Руководство для начинающих
+- [Generate Guide](./docs/GENERATE_GUIDE.md) - AI-генерация конфигураций (NEW!)
 - [HTTP Server Guide](./docs/SERVE_GUIDE.md) - Развертывание агентов как REST API
 - [Документация генератора](./generator/README.md) - YAML-спецификация и система типов
 - [Документация runtime](./runtime/README.md) - Runtime-контракты и интерфейсы

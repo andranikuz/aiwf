@@ -86,10 +86,15 @@ tags: string[]              # Массив строк
 users: User[]               # Массив объектов
 ```
 
-#### Словари
+#### Key-Value пары (вместо словарей)
 ```yaml
-metadata: map(string, any)   # Словарь с любыми значениями
-scores: map(string, number)  # Словарь чисел
+# Вместо map() используйте структурированные типы
+KeyValue:
+  key: string
+  value: string
+
+MyType:
+  metadata: $KeyValue[]  # Массив пар ключ-значение
 ```
 
 #### Ссылки на типы
@@ -110,13 +115,18 @@ types:
     age: int(0..150)
     role: enum(admin, user, guest)
 
+  # Вспомогательный тип для metadata
+  MetadataItem:
+    key: string(1..100)
+    value: string
+
   # Составной тип
   Article:
     title: string(1..200)
     content: string(10..10000)
     author: User
     tags: string[]
-    metadata: map(string, any)
+    metadata: $MetadataItem[]
     status: enum(draft, published)
     published_at: datetime
 ```

@@ -2,100 +2,118 @@
 
 package metasdk
 
+// FieldDefinition represents FieldDefinition
+type FieldDefinition struct {
+	FieldType string `json:"field_type"`
+	FieldName string `json:"field_name"`
+}
+
+// TypeDefinition represents TypeDefinition
+type TypeDefinition struct {
+	Fields []*FieldDefinition `json:"fields"`
+	Description string `json:"description"`
+	Name string `json:"name"`
+}
+
 // ValidationNote represents ValidationNote
 type ValidationNote struct {
+	Field string `json:"field"`
 	Severity string `json:"severity"`
 	Message string `json:"message"`
-	Field string `json:"field"`
+}
+
+// AssistantConfig represents AssistantConfig
+type AssistantConfig struct {
+	Temperature float64 `json:"temperature"`
+	Use string `json:"use"`
+	NeedsDialog bool `json:"needs_dialog"`
+	Name string `json:"name"`
+	InputTypeRef *TypeReference `json:"input_type_ref"`
+	OutputTypeRef *TypeReference `json:"output_type_ref"`
+	MaxTokens int `json:"max_tokens"`
+	DialogMaxRounds int `json:"dialog_max_rounds"`
+	Model string `json:"model"`
+	SystemPrompt string `json:"system_prompt"`
+	NeedsThread bool `json:"needs_thread"`
+}
+
+// GeneratedConfig represents GeneratedConfig
+type GeneratedConfig struct {
+	Types []*TypeDefinition `json:"types"`
+	YamlContent string `json:"yaml_content"`
+	AgentCount int `json:"agent_count"`
+	Assistants []*AssistantConfig `json:"assistants"`
+	ValidationStatus string `json:"validation_status"`
+	ImprovementSuggestions []string `json:"improvement_suggestions"`
+	TypeCount int `json:"type_count"`
+	ValidationNotes []*ValidationNote `json:"validation_notes"`
+	Notes []string `json:"notes"`
+	Version string `json:"version"`
+	GeneratedAt string `json:"generated_at"`
 }
 
 // AgentSpec represents AgentSpec
 type AgentSpec struct {
 	Role string `json:"role"`
-	Model string `json:"model"`
-	Reasoning string `json:"reasoning"`
-	Name string `json:"name"`
-	InputDescription string `json:"input_description"`
-	NeedsDialog bool `json:"needs_dialog"`
-	MaxDialogRounds int `json:"max_dialog_rounds"`
 	Provider string `json:"provider"`
 	OutputDescription string `json:"output_description"`
-}
-
-// GenerationInput represents GenerationInput
-type GenerationInput struct {
-	Analysis string `json:"analysis"`
-	RefinementInstructions string `json:"refinement_instructions"`
-	UserAnswers map[string]string `json:"user_answers"`
-}
-
-// TypeDefinition represents TypeDefinition
-type TypeDefinition struct {
-	Description string `json:"description"`
+	Reasoning string `json:"reasoning"`
 	Name string `json:"name"`
-	Fields []*FieldDefinition `json:"fields"`
-}
-
-// GeneratedConfig represents GeneratedConfig
-type GeneratedConfig struct {
-	YamlContent string `json:"yaml_content"`
-	Notes []string `json:"notes"`
-	TypeCount int `json:"type_count"`
-	Types []*TypeDefinition `json:"types"`
-	GeneratedAt string `json:"generated_at"`
-	AgentCount int `json:"agent_count"`
-	ValidationStatus string `json:"validation_status"`
-	ValidationNotes []*ValidationNote `json:"validation_notes"`
-	ImprovementSuggestions []string `json:"improvement_suggestions"`
-	Version string `json:"version"`
-	Assistants []*AssistantConfig `json:"assistants"`
+	Model string `json:"model"`
+	NeedsDialog bool `json:"needs_dialog"`
+	MaxDialogRounds int `json:"max_dialog_rounds"`
+	InputDescription string `json:"input_description"`
 }
 
 // ClarificationQuestion represents ClarificationQuestion
 type ClarificationQuestion struct {
-	Question string `json:"question"`
 	Reason string `json:"reason"`
 	Suggestions []string `json:"suggestions"`
+	Question string `json:"question"`
 }
 
 // TaskAnalysis represents TaskAnalysis
 type TaskAnalysis struct {
-	Summary string `json:"summary"`
-	NeedsClarification bool `json:"needs_clarification"`
-	ArchitectureNotes string `json:"architecture_notes"`
-	AgentCount int `json:"agent_count"`
+	Agents []*AgentSpec `json:"agents"`
+	RequiresThread bool `json:"requires_thread"`
 	DataTypesNeeded []string `json:"data_types_needed"`
 	ImplementationHints []string `json:"implementation_hints"`
+	AgentCount int `json:"agent_count"`
+	NeedsClarification bool `json:"needs_clarification"`
+	Summary string `json:"summary"`
 	Complexity string `json:"complexity"`
-	ComplexityScore float64 `json:"complexity_score"`
-	Agents []*AgentSpec `json:"agents"`
-	Questions []*ClarificationQuestion `json:"questions"`
-	RequiresThread bool `json:"requires_thread"`
 	RequiresDialog bool `json:"requires_dialog"`
+	Questions []*ClarificationQuestion `json:"questions"`
+	ArchitectureNotes string `json:"architecture_notes"`
+	ComplexityScore float64 `json:"complexity_score"`
 }
 
-// AssistantConfig represents AssistantConfig
-type AssistantConfig struct {
-	Use string `json:"use"`
-	Model string `json:"model"`
-	OutputType string `json:"output_type"`
-	MaxTokens int `json:"max_tokens"`
-	Temperature float64 `json:"temperature"`
+// UserAnswer represents UserAnswer
+type UserAnswer struct {
+	Question string `json:"question"`
+	Answer string `json:"answer"`
+}
+
+// TypeReference represents TypeReference
+type TypeReference struct {
 	Name string `json:"name"`
-	SystemPrompt string `json:"system_prompt"`
-	NeedsDialog bool `json:"needs_dialog"`
-	DialogMaxRounds int `json:"dialog_max_rounds"`
-	InputType string `json:"input_type"`
-	NeedsThread bool `json:"needs_thread"`
+	Kind string `json:"kind"`
 }
 
-// FieldDefinition represents FieldDefinition
-type FieldDefinition struct {
-	FieldName string `json:"field_name"`
-	FieldType string `json:"field_type"`
+// GenerationInput represents GenerationInput
+type GenerationInput struct {
+	RefinementInstructions string `json:"refinement_instructions"`
+	UserAnswers []*UserAnswer `json:"user_answers"`
+	Analysis string `json:"analysis"`
 }
 
 // ============ VALIDATORS ============
+
+// ValidateAgentSpec validates AgentSpec
+func ValidateAgentSpec(v *AgentSpec) error {
+	// No validation rules
+	return nil
+}
 
 // ValidateClarificationQuestion validates ClarificationQuestion
 func ValidateClarificationQuestion(v *ClarificationQuestion) error {
@@ -109,26 +127,14 @@ func ValidateTaskAnalysis(v *TaskAnalysis) error {
 	return nil
 }
 
-// ValidateAssistantConfig validates AssistantConfig
-func ValidateAssistantConfig(v *AssistantConfig) error {
+// ValidateUserAnswer validates UserAnswer
+func ValidateUserAnswer(v *UserAnswer) error {
 	// No validation rules
 	return nil
 }
 
-// ValidateFieldDefinition validates FieldDefinition
-func ValidateFieldDefinition(v *FieldDefinition) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateValidationNote validates ValidationNote
-func ValidateValidationNote(v *ValidationNote) error {
-	// No validation rules
-	return nil
-}
-
-// ValidateAgentSpec validates AgentSpec
-func ValidateAgentSpec(v *AgentSpec) error {
+// ValidateTypeReference validates TypeReference
+func ValidateTypeReference(v *TypeReference) error {
 	// No validation rules
 	return nil
 }
@@ -139,8 +145,26 @@ func ValidateGenerationInput(v *GenerationInput) error {
 	return nil
 }
 
+// ValidateFieldDefinition validates FieldDefinition
+func ValidateFieldDefinition(v *FieldDefinition) error {
+	// No validation rules
+	return nil
+}
+
 // ValidateTypeDefinition validates TypeDefinition
 func ValidateTypeDefinition(v *TypeDefinition) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateValidationNote validates ValidationNote
+func ValidateValidationNote(v *ValidationNote) error {
+	// No validation rules
+	return nil
+}
+
+// ValidateAssistantConfig validates AssistantConfig
+func ValidateAssistantConfig(v *AssistantConfig) error {
 	// No validation rules
 	return nil
 }
@@ -155,67 +179,94 @@ func ValidateGeneratedConfig(v *GeneratedConfig) error {
 
 // TypeMetadata exports type definitions for providers
 var TypeMetadata = map[string]interface{}{
-	"AgentSpec": map[string]interface{}{
+	"ValidationNote": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"message": map[string]interface{}{
+		"type": "string",
+	},
+			"field": map[string]interface{}{
+		"type": "string",
+	},
+			"severity": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"error", "warning", "info"},
+	},
+		},
+		"required": []string{"message", "field", "severity"},
+		"additionalProperties": false,
+	},
+	"AssistantConfig": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"input_type_ref": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
 			"name": map[string]interface{}{
 		"type": "string",
 	},
-			"input_description": map[string]interface{}{
+			"kind": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"primitive", "custom"},
+	},
+		},
+		"required": []string{"name", "kind"},
+		"additionalProperties": false,
+	},
+			"output_type_ref": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
 		"type": "string",
 	},
-			"needs_dialog": map[string]interface{}{
-		"type": "boolean",
+			"kind": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"primitive", "custom"},
 	},
-			"max_dialog_rounds": map[string]interface{}{
+		},
+		"required": []string{"name", "kind"},
+		"additionalProperties": false,
+	},
+			"max_tokens": map[string]interface{}{
 		"type": "integer",
 	},
-			"provider": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"openai", "grok", "anthropic"},
-	},
-			"output_description": map[string]interface{}{
-		"type": "string",
-	},
-			"role": map[string]interface{}{
-		"type": "string",
+			"dialog_max_rounds": map[string]interface{}{
+		"type": "integer",
 	},
 			"model": map[string]interface{}{
 		"type": "string",
 	},
-			"reasoning": map[string]interface{}{
+			"system_prompt": map[string]interface{}{
 		"type": "string",
 	},
-		},
-		"required": []string{"name", "input_description", "needs_dialog", "max_dialog_rounds", "provider", "output_description", "role", "model", "reasoning"},
-		"additionalProperties": false,
+			"needs_thread": map[string]interface{}{
+		"type": "boolean",
 	},
-	"GenerationInput": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"user_answers": map[string]interface{}{
-		"type": "object",
-		"additionalProperties": true,
+			"temperature": map[string]interface{}{
+		"type": "number",
 	},
-			"analysis": map[string]interface{}{
+			"use": map[string]interface{}{
 		"type": "string",
+		"enum": []string{"openai", "grok", "anthropic"},
 	},
-			"refinement_instructions": map[string]interface{}{
-		"type": "string",
-	},
-		},
-		"required": []string{"user_answers", "analysis", "refinement_instructions"},
-		"additionalProperties": false,
-	},
-	"TypeDefinition": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"description": map[string]interface{}{
-		"type": "string",
+			"needs_dialog": map[string]interface{}{
+		"type": "boolean",
 	},
 			"name": map[string]interface{}{
 		"type": "string",
 	},
+		},
+		"required": []string{"input_type_ref", "output_type_ref", "max_tokens", "dialog_max_rounds", "model", "system_prompt", "needs_thread", "temperature", "use", "needs_dialog", "name"},
+		"additionalProperties": false,
+	},
+	"GeneratedConfig": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"types": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
 			"fields": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
@@ -232,97 +283,94 @@ var TypeMetadata = map[string]interface{}{
 		"additionalProperties": false,
 	},
 	},
-		},
-		"required": []string{"description", "name", "fields"},
-		"additionalProperties": false,
-	},
-	"GeneratedConfig": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"agent_count": map[string]interface{}{
-		"type": "integer",
-	},
-			"validation_status": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"valid", "invalid", "warning"},
-	},
-			"validation_notes": map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"field": map[string]interface{}{
+			"description": map[string]interface{}{
 		"type": "string",
 	},
-			"severity": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"error", "warning", "info"},
-	},
-			"message": map[string]interface{}{
-		"type": "string",
-	},
-		},
-		"required": []string{"field", "severity", "message"},
-		"additionalProperties": false,
-	},
-	},
-			"improvement_suggestions": map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-		"type": "string",
-	},
-	},
-			"version": map[string]interface{}{
-		"type": "string",
-	},
-			"assistants": map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
 			"name": map[string]interface{}{
 		"type": "string",
 	},
-			"system_prompt": map[string]interface{}{
-		"type": "string",
-	},
-			"needs_dialog": map[string]interface{}{
-		"type": "boolean",
-	},
-			"dialog_max_rounds": map[string]interface{}{
-		"type": "integer",
-	},
-			"input_type": map[string]interface{}{
-		"type": "string",
-	},
-			"needs_thread": map[string]interface{}{
-		"type": "boolean",
-	},
-			"use": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"openai", "grok", "anthropic"},
-	},
-			"model": map[string]interface{}{
-		"type": "string",
-	},
-			"output_type": map[string]interface{}{
-		"type": "string",
-	},
-			"max_tokens": map[string]interface{}{
-		"type": "integer",
-	},
-			"temperature": map[string]interface{}{
-		"type": "number",
-	},
 		},
-		"required": []string{"name", "system_prompt", "needs_dialog", "dialog_max_rounds", "input_type", "needs_thread", "use", "model", "output_type", "max_tokens", "temperature"},
+		"required": []string{"fields", "description", "name"},
 		"additionalProperties": false,
 	},
 	},
 			"yaml_content": map[string]interface{}{
 		"type": "string",
 	},
-			"notes": map[string]interface{}{
+			"agent_count": map[string]interface{}{
+		"type": "integer",
+	},
+			"assistants": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"input_type_ref": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+			"kind": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"primitive", "custom"},
+	},
+		},
+		"required": []string{"name", "kind"},
+		"additionalProperties": false,
+	},
+			"output_type_ref": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+			"kind": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"primitive", "custom"},
+	},
+		},
+		"required": []string{"name", "kind"},
+		"additionalProperties": false,
+	},
+			"max_tokens": map[string]interface{}{
+		"type": "integer",
+	},
+			"dialog_max_rounds": map[string]interface{}{
+		"type": "integer",
+	},
+			"model": map[string]interface{}{
+		"type": "string",
+	},
+			"system_prompt": map[string]interface{}{
+		"type": "string",
+	},
+			"needs_thread": map[string]interface{}{
+		"type": "boolean",
+	},
+			"temperature": map[string]interface{}{
+		"type": "number",
+	},
+			"use": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"openai", "grok", "anthropic"},
+	},
+			"needs_dialog": map[string]interface{}{
+		"type": "boolean",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"input_type_ref", "output_type_ref", "max_tokens", "dialog_max_rounds", "model", "system_prompt", "needs_thread", "temperature", "use", "needs_dialog", "name"},
+		"additionalProperties": false,
+	},
+	},
+			"validation_status": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"valid", "invalid", "warning"},
+	},
+			"improvement_suggestions": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
 		"type": "string",
@@ -331,51 +379,80 @@ var TypeMetadata = map[string]interface{}{
 			"type_count": map[string]interface{}{
 		"type": "integer",
 	},
-			"types": map[string]interface{}{
+			"validation_notes": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"description": map[string]interface{}{
+			"severity": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"error", "warning", "info"},
+	},
+			"message": map[string]interface{}{
 		"type": "string",
 	},
-			"name": map[string]interface{}{
+			"field": map[string]interface{}{
 		"type": "string",
 	},
-			"fields": map[string]interface{}{
+		},
+		"required": []string{"severity", "message", "field"},
+		"additionalProperties": false,
+	},
+	},
+			"notes": map[string]interface{}{
 		"type": "array",
 		"items": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"field_name": map[string]interface{}{
 		"type": "string",
 	},
-			"field_type": map[string]interface{}{
+	},
+			"version": map[string]interface{}{
 		"type": "string",
-	},
-		},
-		"required": []string{"field_name", "field_type"},
-		"additionalProperties": false,
-	},
-	},
-		},
-		"required": []string{"description", "name", "fields"},
-		"additionalProperties": false,
-	},
 	},
 			"generated_at": map[string]interface{}{
 		"type": "string",
 	},
 		},
-		"required": []string{"agent_count", "validation_status", "validation_notes", "improvement_suggestions", "version", "assistants", "yaml_content", "notes", "type_count", "types", "generated_at"},
+		"required": []string{"types", "yaml_content", "agent_count", "assistants", "validation_status", "improvement_suggestions", "type_count", "validation_notes", "notes", "version", "generated_at"},
+		"additionalProperties": false,
+	},
+	"AgentSpec": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+			"model": map[string]interface{}{
+		"type": "string",
+	},
+			"needs_dialog": map[string]interface{}{
+		"type": "boolean",
+	},
+			"max_dialog_rounds": map[string]interface{}{
+		"type": "integer",
+	},
+			"input_description": map[string]interface{}{
+		"type": "string",
+	},
+			"role": map[string]interface{}{
+		"type": "string",
+	},
+			"provider": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"openai", "grok", "anthropic"},
+	},
+			"output_description": map[string]interface{}{
+		"type": "string",
+	},
+			"reasoning": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"name", "model", "needs_dialog", "max_dialog_rounds", "input_description", "role", "provider", "output_description", "reasoning"},
 		"additionalProperties": false,
 	},
 	"ClarificationQuestion": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"question": map[string]interface{}{
-		"type": "string",
-	},
 			"reason": map[string]interface{}{
 		"type": "string",
 	},
@@ -385,53 +462,28 @@ var TypeMetadata = map[string]interface{}{
 		"type": "string",
 	},
 	},
+			"question": map[string]interface{}{
+		"type": "string",
+	},
 		},
-		"required": []string{"question", "reason", "suggestions"},
+		"required": []string{"reason", "suggestions", "question"},
 		"additionalProperties": false,
 	},
 	"TaskAnalysis": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"complexity_score": map[string]interface{}{
-		"type": "number",
-	},
-			"agents": map[string]interface{}{
-		"type": "array",
-		"items": map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"needs_dialog": map[string]interface{}{
+			"needs_clarification": map[string]interface{}{
 		"type": "boolean",
 	},
-			"max_dialog_rounds": map[string]interface{}{
-		"type": "integer",
-	},
-			"provider": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"openai", "grok", "anthropic"},
-	},
-			"output_description": map[string]interface{}{
+			"summary": map[string]interface{}{
 		"type": "string",
 	},
-			"role": map[string]interface{}{
+			"complexity": map[string]interface{}{
 		"type": "string",
+		"enum": []string{"simple", "medium", "complex", "very_complex"},
 	},
-			"model": map[string]interface{}{
-		"type": "string",
-	},
-			"reasoning": map[string]interface{}{
-		"type": "string",
-	},
-			"name": map[string]interface{}{
-		"type": "string",
-	},
-			"input_description": map[string]interface{}{
-		"type": "string",
-	},
-		},
-		"required": []string{"needs_dialog", "max_dialog_rounds", "provider", "output_description", "role", "model", "reasoning", "name", "input_description"},
-		"additionalProperties": false,
-	},
+			"requires_dialog": map[string]interface{}{
+		"type": "boolean",
 	},
 			"questions": map[string]interface{}{
 		"type": "array",
@@ -455,23 +507,52 @@ var TypeMetadata = map[string]interface{}{
 		"additionalProperties": false,
 	},
 	},
-			"requires_thread": map[string]interface{}{
-		"type": "boolean",
-	},
-			"requires_dialog": map[string]interface{}{
-		"type": "boolean",
-	},
-			"summary": map[string]interface{}{
-		"type": "string",
-	},
-			"needs_clarification": map[string]interface{}{
-		"type": "boolean",
-	},
 			"architecture_notes": map[string]interface{}{
 		"type": "string",
 	},
-			"agent_count": map[string]interface{}{
+			"complexity_score": map[string]interface{}{
+		"type": "number",
+	},
+			"agents": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"role": map[string]interface{}{
+		"type": "string",
+	},
+			"provider": map[string]interface{}{
+		"type": "string",
+		"enum": []string{"openai", "grok", "anthropic"},
+	},
+			"output_description": map[string]interface{}{
+		"type": "string",
+	},
+			"reasoning": map[string]interface{}{
+		"type": "string",
+	},
+			"name": map[string]interface{}{
+		"type": "string",
+	},
+			"model": map[string]interface{}{
+		"type": "string",
+	},
+			"needs_dialog": map[string]interface{}{
+		"type": "boolean",
+	},
+			"max_dialog_rounds": map[string]interface{}{
 		"type": "integer",
+	},
+			"input_description": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"role", "provider", "output_description", "reasoning", "name", "model", "needs_dialog", "max_dialog_rounds", "input_description"},
+		"additionalProperties": false,
+	},
+	},
+			"requires_thread": map[string]interface{}{
+		"type": "boolean",
 	},
 			"data_types_needed": map[string]interface{}{
 		"type": "array",
@@ -485,83 +566,109 @@ var TypeMetadata = map[string]interface{}{
 		"type": "string",
 	},
 	},
-			"complexity": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"simple", "medium", "complex", "very_complex"},
+			"agent_count": map[string]interface{}{
+		"type": "integer",
 	},
 		},
-		"required": []string{"complexity_score", "agents", "questions", "requires_thread", "requires_dialog", "summary", "needs_clarification", "architecture_notes", "agent_count", "data_types_needed", "implementation_hints", "complexity"},
+		"required": []string{"needs_clarification", "summary", "complexity", "requires_dialog", "questions", "architecture_notes", "complexity_score", "agents", "requires_thread", "data_types_needed", "implementation_hints", "agent_count"},
 		"additionalProperties": false,
 	},
-	"AssistantConfig": map[string]interface{}{
+	"UserAnswer": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"dialog_max_rounds": map[string]interface{}{
-		"type": "integer",
-	},
-			"input_type": map[string]interface{}{
+			"question": map[string]interface{}{
 		"type": "string",
 	},
-			"needs_thread": map[string]interface{}{
-		"type": "boolean",
-	},
-			"use": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"openai", "grok", "anthropic"},
-	},
-			"model": map[string]interface{}{
+			"answer": map[string]interface{}{
 		"type": "string",
 	},
-			"output_type": map[string]interface{}{
-		"type": "string",
+		},
+		"required": []string{"question", "answer"},
+		"additionalProperties": false,
 	},
-			"max_tokens": map[string]interface{}{
-		"type": "integer",
-	},
-			"temperature": map[string]interface{}{
-		"type": "number",
-	},
+	"TypeReference": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
 			"name": map[string]interface{}{
 		"type": "string",
 	},
-			"system_prompt": map[string]interface{}{
+			"kind": map[string]interface{}{
 		"type": "string",
-	},
-			"needs_dialog": map[string]interface{}{
-		"type": "boolean",
+		"enum": []string{"primitive", "custom"},
 	},
 		},
-		"required": []string{"dialog_max_rounds", "input_type", "needs_thread", "use", "model", "output_type", "max_tokens", "temperature", "name", "system_prompt", "needs_dialog"},
+		"required": []string{"name", "kind"},
+		"additionalProperties": false,
+	},
+	"GenerationInput": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"refinement_instructions": map[string]interface{}{
+		"type": "string",
+	},
+			"user_answers": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"question": map[string]interface{}{
+		"type": "string",
+	},
+			"answer": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"question", "answer"},
+		"additionalProperties": false,
+	},
+	},
+			"analysis": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"refinement_instructions", "user_answers", "analysis"},
 		"additionalProperties": false,
 	},
 	"FieldDefinition": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"field_type": map[string]interface{}{
-		"type": "string",
-	},
 			"field_name": map[string]interface{}{
 		"type": "string",
 	},
+			"field_type": map[string]interface{}{
+		"type": "string",
+	},
 		},
-		"required": []string{"field_type", "field_name"},
+		"required": []string{"field_name", "field_type"},
 		"additionalProperties": false,
 	},
-	"ValidationNote": map[string]interface{}{
+	"TypeDefinition": map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"severity": map[string]interface{}{
-		"type": "string",
-		"enum": []string{"error", "warning", "info"},
-	},
-			"message": map[string]interface{}{
+			"name": map[string]interface{}{
 		"type": "string",
 	},
-			"field": map[string]interface{}{
+			"fields": map[string]interface{}{
+		"type": "array",
+		"items": map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"field_name": map[string]interface{}{
+		"type": "string",
+	},
+			"field_type": map[string]interface{}{
 		"type": "string",
 	},
 		},
-		"required": []string{"severity", "message", "field"},
+		"required": []string{"field_name", "field_type"},
+		"additionalProperties": false,
+	},
+	},
+			"description": map[string]interface{}{
+		"type": "string",
+	},
+		},
+		"required": []string{"name", "fields", "description"},
 		"additionalProperties": false,
 	},
 }

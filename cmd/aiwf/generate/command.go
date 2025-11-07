@@ -180,7 +180,7 @@ func runInteractiveGeneration(service *metasdk.Service, initialTask, outputPath 
 	printAnalysisResult(analysis)
 
 	// Check if clarification needed
-	userAnswers := make(map[string]string)
+	var userAnswers []*metasdk.UserAnswer
 	if analysis.NeedsClarification {
 		fmt.Println("\n❓ The agent has some questions to better understand your task:")
 		for i, q := range analysis.Questions {
@@ -193,7 +193,10 @@ func runInteractiveGeneration(service *metasdk.Service, initialTask, outputPath 
 			}
 			fmt.Print("   Your answer: ")
 			answer, _ := reader.ReadString('\n')
-			userAnswers[q.Question] = strings.TrimSpace(answer)
+			userAnswers = append(userAnswers, &metasdk.UserAnswer{
+				Question: q.Question,
+				Answer:   strings.TrimSpace(answer),
+			})
 		}
 	}
 
@@ -393,7 +396,7 @@ func runQuickGeneration(service *metasdk.Service, taskDesc, outputPath string) e
 	input := metasdk.GenerationInput{
 		Analysis:               string(analysisJSON),
 		RefinementInstructions: "",
-		UserAnswers:            make(map[string]string),
+		UserAnswers:            []*metasdk.UserAnswer{},
 	}
 
 	config, trace2, err := service.Agents().YamlGenerator.Run(ctx, input)

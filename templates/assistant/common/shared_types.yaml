@@ -10,10 +10,14 @@ types:
     created_at: datetime
     updated_at: datetime
 
+  ErrorDetailItem:
+    key: string(1..100)
+    value: string
+
   Error:
     code: string
     message: string
-    details: map(string, any)
+    details: $ErrorDetailItem[]
 
   Pagination:
     page: int(1..)

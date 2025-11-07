@@ -56,10 +56,14 @@ types:
     implementation_hints: string[]
 
   # === Генерация конфигурации ===
+  UserAnswer:
+    question: string(1..500)
+    answer: string(1..2000)
+
   GenerationInput:
     analysis: string  # JSON-представление TaskAnalysis или просто текст
     refinement_instructions: string  # Уточнения от пользователя (опционально)
-    user_answers: map(string, string)  # Ответы на вопросы (опционально)
+    user_answers: $UserAnswer[]  # Ответы на вопросы (опционально)
 
   FieldDefinition:
     field_name: string(1..100)
@@ -70,13 +74,19 @@ types:
     fields: $FieldDefinition[]
     description: string
 
+  # Ссылка на тип с метаданными
+  TypeReference:
+    name: string(1..100)  # имя типа: "string", "int", "Email", "UserData", etc
+    kind: enum(primitive, custom)  # primitive = базовый тип, custom = пользовательский
+
   AssistantConfig:
     name: string(1..50)
     use: enum(openai, grok, anthropic)
     model: string(5..50)
     system_prompt: string(50..3000)
-    input_type: string(1..100)
-    output_type: string(1..100)
+    # Явные ссылки на типы с метаданными
+    input_type_ref: $TypeReference
+    output_type_ref: $TypeReference
     max_tokens: int(100..16000)
     temperature: number(0.0..2.0)
     needs_thread: bool
@@ -281,8 +291,16 @@ assistants:
       - `int[]` - array of integers
       - `$CustomType[]` - array of custom types
       - `$CustomType[](min:1, max:10)` - array with size constraints
-      - `map(string, any)` - dictionary
-      - `map(string, string)` - string dictionary
+
+      **Note**: For key-value pairs, use structured types:
+      ```yaml
+      KeyValue:
+        key: string
+        value: string
+
+      MyType:
+        items: $KeyValue[]
+      ```
 
       **References**:
       - `$TypeName` - reference to custom type
@@ -359,6 +377,10 @@ assistants:
       Provide GeneratedConfig with:
       - Complete, valid YAML in `yaml_content` field
       - Structured representation in `types` and `assistants` arrays
+      - **IMPORTANT**: For each assistant, fill `input_type_ref` and `output_type_ref`:
+        * Set `kind: "primitive"` for basic types: string, int, number, bool, uuid, datetime, date, any
+        * Set `kind: "custom"` for user-defined types that appear in the `types` section
+        * Example: `{ name: "string", kind: "primitive" }` or `{ name: "Email", kind: "custom" }`
       - Validation status and notes
       - Improvement suggestions
       - Implementation hints

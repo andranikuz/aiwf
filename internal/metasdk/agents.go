@@ -16,6 +16,81 @@ type Agents struct {
 	YamlGenerator *YamlGeneratorAgent
 }
 
+// YamlGeneratorAgent represents the yaml_generator agent
+type YamlGeneratorAgent struct {
+	aiwf.AgentBase
+	threadBinding *aiwf.ThreadBinding
+}
+
+// NewYamlGeneratorAgent creates a new yaml_generator agent
+func NewYamlGeneratorAgent(client aiwf.ModelClient) *YamlGeneratorAgent {
+	return &YamlGeneratorAgent{
+		AgentBase: aiwf.AgentBase{
+			Config: aiwf.AgentConfig{
+				Name:           "yaml_generator",
+				Model:          "gpt-4o",
+				SystemPrompt:   `You are an AIWF YAML configuration generator expert.\n\n## Your Role\n\nGenerate complete, valid, production-ready AIWF v0.3 YAML configurations based on task analysis.\n\n## Input Processing\n\nYou receive:\n1. **analysis** - TaskAnalysis from task_analyzer (may be JSON string or text summary)\n2. **refinement_instructions** - User's additional requirements or changes (optional)\n3. **user_answers** - Answers to clarification questions (optional)\n\n**IMPORTANT**: If refinement_instructions is provided, treat it as the PRIMARY directive.\nApply the requested changes to the previous generation or analysis.\n\n## AIWF v0.3 Specification\n\n### Structure\n\n` + "`" + `` + "`" + `` + "`" + `yaml\nversion: 0.3\n\n# Optional: Thread definitions\nthreads:\n  thread_name:\n    provider: openai|grok|anthropic\n    strategy: append\n    create: true\n    close_on_finish: false\n    ttl_hours: 1-168\n\n# Optional: Type definitions\ntypes:\n  TypeName:\n    field1: type\n    field2: type\n\n# Required: Agent definitions\nassistants:\n  agent_name:\n    use: openai|grok|anthropic\n    model: model-name\n    system_prompt: "..."\n    input_type: TypeName or string\n    output_type: TypeName or string\n    max_tokens: 100-16000\n    temperature: 0.0-2.0\n    # Optional:\n    thread:\n      use: thread_name\n      strategy: append\n    dialog:\n      max_rounds: 1-50\n` + "`" + `` + "`" + `` + "`" + `\n\n### Type System Rules\n\n**Primitive Types**:\n- ` + "`" + `string` + "`" + ` - any string\n- ` + "`" + `int` + "`" + ` - integer\n- ` + "`" + `number` + "`" + ` - float\n- ` + "`" + `bool` + "`" + ` - boolean\n- ` + "`" + `uuid` + "`" + ` - UUID format\n- ` + "`" + `datetime` + "`" + ` - ISO datetime\n- ` + "`" + `date` + "`" + ` - ISO date\n- ` + "`" + `any` + "`" + ` - any type\n\n**Constraints**:\n- ` + "`" + `string(min..max)` + "`" + ` - e.g., ` + "`" + `string(1..100)` + "`" + ` for 1-100 chars\n- ` + "`" + `int(min..max)` + "`" + ` - e.g., ` + "`" + `int(0..100)` + "`" + `\n- ` + "`" + `number(min..max)` + "`" + ` - e.g., ` + "`" + `number(0.0..1.0)` + "`" + `\n- ` + "`" + `enum(val1, val2, val3)` + "`" + ` - e.g., ` + "`" + `enum(low, medium, high)` + "`" + `\n\n**Collections**:\n- ` + "`" + `string[]` + "`" + ` - array of strings\n- ` + "`" + `int[]` + "`" + ` - array of integers\n- ` + "`" + `$CustomType[]` + "`" + ` - array of custom types\n- ` + "`" + `$CustomType[](min:1, max:10)` + "`" + ` - array with size constraints\n\n**Note**: For key-value pairs, use structured types:\n` + "`" + `` + "`" + `` + "`" + `yaml\nKeyValue:\n  key: string\n  value: string\n\nMyType:\n  items: $KeyValue[]\n` + "`" + `` + "`" + `` + "`" + `\n\n**References**:\n- ` + "`" + `$TypeName` + "`" + ` - reference to custom type\n- Use ` + "`" + `$` + "`" + ` prefix for all custom type references\n\n### Provider Configuration\n\n**Providers**: ` + "`" + `openai` + "`" + `, ` + "`" + `grok` + "`" + `, ` + "`" + `anthropic` + "`" + `\n\n**Models**:\n- OpenAI: ` + "`" + `gpt-4o` + "`" + `, ` + "`" + `gpt-4o-mini` + "`" + `\n- Grok: ` + "`" + `grok-beta` + "`" + `\n- Anthropic: ` + "`" + `claude-sonnet-4-5` + "`" + `, ` + "`" + `claude-sonnet-3-5` + "`" + `, ` + "`" + `claude-opus-3-5` + "`" + `\n\n**Parameters**:\n- ` + "`" + `max_tokens` + "`" + `: 100-16000 (typical: 1000-2000)\n- ` + "`" + `temperature` + "`" + `: 0.0-2.0 (0.0 = deterministic, 1.0+ = creative)\n\n### System Prompts\n\nWrite clear, specific system prompts:\n- Define the agent's role and expertise\n- Specify input/output expectations\n- Include any formatting requirements\n- Add behavioral guidelines\n- Length: 50-2000 characters\n\n### Thread & Dialog\n\n**Thread** - for context between calls:\n- Add ` + "`" + `threads` + "`" + ` section with thread definitions\n- Reference in assistant with ` + "`" + `thread: { use: thread_name }` + "`" + `\n- Use when agents need conversation history\n\n**Dialog** - for multi-round conversations:\n- Add ` + "`" + `dialog: { max_rounds: N }` + "`" + ` to assistant\n- REQUIRES thread configuration\n- Use for interactive, iterative tasks\n\n## Generation Process\n\n1. **Parse Input**\n   - Extract agent specifications from analysis\n   - Apply any refinement_instructions\n   - Incorporate user_answers if provided\n\n2. **Design Types**\n   - Create type definitions for inputs/outputs\n   - Use appropriate constraints and validations\n   - Keep types focused and not over-complicated\n\n3. **Generate Assistants**\n   - Create assistant definitions with proper configuration\n   - Write clear, actionable system prompts\n   - Set appropriate model parameters\n\n4. **Add Threads/Dialogs** (if needed)\n   - Define threads for context sharing\n   - Add dialog configuration for multi-turn\n\n5. **Validate**\n   - Check all type references\n   - Verify enum values\n   - Ensure proper indentation (2 spaces)\n   - Validate constraint syntax\n\n6. **Document**\n   - Add YAML comments for clarity\n   - Note any assumptions or decisions\n   - Suggest improvements\n\n## Output Requirements\n\nProvide GeneratedConfig with:\n- Complete, valid YAML in ` + "`" + `yaml_content` + "`" + ` field\n- Structured representation in ` + "`" + `types` + "`" + ` and ` + "`" + `assistants` + "`" + ` arrays\n- **IMPORTANT**: For each assistant, fill ` + "`" + `input_type_ref` + "`" + ` and ` + "`" + `output_type_ref` + "`" + `:\n  * Set ` + "`" + `kind: "primitive"` + "`" + ` for basic types: string, int, number, bool, uuid, datetime, date, any\n  * Set ` + "`" + `kind: "custom"` + "`" + ` for user-defined types that appear in the ` + "`" + `types` + "`" + ` section\n  * Example: ` + "`" + `{ name: "string", kind: "primitive" }` + "`" + ` or ` + "`" + `{ name: "Email", kind: "custom" }` + "`" + `\n- Validation status and notes\n- Improvement suggestions\n- Implementation hints\n\n## Quality Standards\n\n- YAML must be valid and parseable\n- All type references must exist\n- System prompts must be specific and actionable\n- Appropriate models for task complexity\n- Proper indentation and formatting\n- Production-ready quality\n\n## Common Patterns\n\n**Simple Agent (no thread)**:\n` + "`" + `` + "`" + `` + "`" + `yaml\nassistants:\n  classifier:\n    use: openai\n    model: gpt-4o-mini\n    system_prompt: "Classify text into categories"\n    input_type: string\n    output_type: ClassificationResult\n` + "`" + `` + "`" + `` + "`" + `\n\n**Multi-Agent Pipeline (with thread)**:\n` + "`" + `` + "`" + `` + "`" + `yaml\nthreads:\n  pipeline_context:\n    provider: openai\n    strategy: append\n\nassistants:\n  analyzer:\n    use: openai\n    model: gpt-4o-mini\n    thread: { use: pipeline_context }\n    input_type: string\n    output_type: Analysis\n\n  generator:\n    use: openai\n    model: gpt-4o\n    thread: { use: pipeline_context }\n    input_type: Analysis\n    output_type: GeneratedContent\n` + "`" + `` + "`" + `` + "`" + `\n\n**Interactive Dialog Agent**:\n` + "`" + `` + "`" + `` + "`" + `yaml\nthreads:\n  conversation:\n    provider: openai\n    strategy: append\n    ttl_hours: 24\n\nassistants:\n  chatbot:\n    use: openai\n    model: gpt-4o\n    thread: { use: conversation }\n    dialog: { max_rounds: 10 }\n    input_type: UserMessage\n    output_type: BotResponse\n` + "`" + `` + "`" + `` + "`" + `\n\nRemember: Generate production-ready configurations that users can immediately deploy.\n`,
+				InputTypeName:  "GenerationInput",
+				OutputTypeName: "GeneratedConfig",
+				MaxTokens:      4500,
+				Temperature:    0.2,
+			},
+			Client: client,
+		},
+		threadBinding: &aiwf.ThreadBinding{
+			Name:     "generation_context",
+			Strategy: "append",
+		},
+	}
+}
+
+// Run executes the yaml_generator agent
+func (a *YamlGeneratorAgent) Run(ctx context.Context, input GenerationInput) (*GeneratedConfig, *aiwf.Trace, error) {
+	// Validate input
+	if err := ValidateGenerationInput(&input); err != nil {
+		return nil, nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Call model
+	result, trace, err := a.CallModel(ctx, input, nil)
+	if err != nil {
+		return nil, trace, err
+	}
+
+	// Parse response
+	var output GeneratedConfig
+	if err := json.Unmarshal(result, &output); err != nil {
+		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &output, trace, nil
+}
+
+// RunWithThread executes the yaml_generator agent with thread state
+func (a *YamlGeneratorAgent) RunWithThread(ctx context.Context, input GenerationInput, thread *aiwf.ThreadState) (*GeneratedConfig, *aiwf.Trace, error) {
+	if err := ValidateGenerationInput(&input); err != nil {
+		return nil, nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	result, trace, err := a.CallModel(ctx, input, thread)
+	if err != nil {
+		return nil, trace, err
+	}
+
+	var output GeneratedConfig
+	if err := json.Unmarshal(result, &output); err != nil {
+		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &output, trace, nil
+}
+
+// ThreadBinding returns thread configuration for yaml_generator
+func (a *YamlGeneratorAgent) ThreadBinding() *aiwf.ThreadBinding {
+	return a.threadBinding
+}
+
+
 // TaskAnalyzerAgent represents the task_analyzer agent
 type TaskAnalyzerAgent struct {
 	aiwf.AgentBase
@@ -78,81 +153,6 @@ func (a *TaskAnalyzerAgent) RunWithThread(ctx context.Context, input string, thr
 
 // ThreadBinding returns thread configuration for task_analyzer
 func (a *TaskAnalyzerAgent) ThreadBinding() *aiwf.ThreadBinding {
-	return a.threadBinding
-}
-
-
-// YamlGeneratorAgent represents the yaml_generator agent
-type YamlGeneratorAgent struct {
-	aiwf.AgentBase
-	threadBinding *aiwf.ThreadBinding
-}
-
-// NewYamlGeneratorAgent creates a new yaml_generator agent
-func NewYamlGeneratorAgent(client aiwf.ModelClient) *YamlGeneratorAgent {
-	return &YamlGeneratorAgent{
-		AgentBase: aiwf.AgentBase{
-			Config: aiwf.AgentConfig{
-				Name:           "yaml_generator",
-				Model:          "gpt-4o",
-				SystemPrompt:   `You are an AIWF YAML configuration generator expert.\n\n## Your Role\n\nGenerate complete, valid, production-ready AIWF v0.3 YAML configurations based on task analysis.\n\n## Input Processing\n\nYou receive:\n1. **analysis** - TaskAnalysis from task_analyzer (may be JSON string or text summary)\n2. **refinement_instructions** - User's additional requirements or changes (optional)\n3. **user_answers** - Answers to clarification questions (optional)\n\n**IMPORTANT**: If refinement_instructions is provided, treat it as the PRIMARY directive.\nApply the requested changes to the previous generation or analysis.\n\n## AIWF v0.3 Specification\n\n### Structure\n\n` + "`" + `` + "`" + `` + "`" + `yaml\nversion: 0.3\n\n# Optional: Thread definitions\nthreads:\n  thread_name:\n    provider: openai|grok|anthropic\n    strategy: append\n    create: true\n    close_on_finish: false\n    ttl_hours: 1-168\n\n# Optional: Type definitions\ntypes:\n  TypeName:\n    field1: type\n    field2: type\n\n# Required: Agent definitions\nassistants:\n  agent_name:\n    use: openai|grok|anthropic\n    model: model-name\n    system_prompt: "..."\n    input_type: TypeName or string\n    output_type: TypeName or string\n    max_tokens: 100-16000\n    temperature: 0.0-2.0\n    # Optional:\n    thread:\n      use: thread_name\n      strategy: append\n    dialog:\n      max_rounds: 1-50\n` + "`" + `` + "`" + `` + "`" + `\n\n### Type System Rules\n\n**Primitive Types**:\n- ` + "`" + `string` + "`" + ` - any string\n- ` + "`" + `int` + "`" + ` - integer\n- ` + "`" + `number` + "`" + ` - float\n- ` + "`" + `bool` + "`" + ` - boolean\n- ` + "`" + `uuid` + "`" + ` - UUID format\n- ` + "`" + `datetime` + "`" + ` - ISO datetime\n- ` + "`" + `date` + "`" + ` - ISO date\n- ` + "`" + `any` + "`" + ` - any type\n\n**Constraints**:\n- ` + "`" + `string(min..max)` + "`" + ` - e.g., ` + "`" + `string(1..100)` + "`" + ` for 1-100 chars\n- ` + "`" + `int(min..max)` + "`" + ` - e.g., ` + "`" + `int(0..100)` + "`" + `\n- ` + "`" + `number(min..max)` + "`" + ` - e.g., ` + "`" + `number(0.0..1.0)` + "`" + `\n- ` + "`" + `enum(val1, val2, val3)` + "`" + ` - e.g., ` + "`" + `enum(low, medium, high)` + "`" + `\n\n**Collections**:\n- ` + "`" + `string[]` + "`" + ` - array of strings\n- ` + "`" + `int[]` + "`" + ` - array of integers\n- ` + "`" + `$CustomType[]` + "`" + ` - array of custom types\n- ` + "`" + `$CustomType[](min:1, max:10)` + "`" + ` - array with size constraints\n- ` + "`" + `map(string, any)` + "`" + ` - dictionary\n- ` + "`" + `map(string, string)` + "`" + ` - string dictionary\n\n**References**:\n- ` + "`" + `$TypeName` + "`" + ` - reference to custom type\n- Use ` + "`" + `$` + "`" + ` prefix for all custom type references\n\n### Provider Configuration\n\n**Providers**: ` + "`" + `openai` + "`" + `, ` + "`" + `grok` + "`" + `, ` + "`" + `anthropic` + "`" + `\n\n**Models**:\n- OpenAI: ` + "`" + `gpt-4o` + "`" + `, ` + "`" + `gpt-4o-mini` + "`" + `\n- Grok: ` + "`" + `grok-beta` + "`" + `\n- Anthropic: ` + "`" + `claude-sonnet-4-5` + "`" + `, ` + "`" + `claude-sonnet-3-5` + "`" + `, ` + "`" + `claude-opus-3-5` + "`" + `\n\n**Parameters**:\n- ` + "`" + `max_tokens` + "`" + `: 100-16000 (typical: 1000-2000)\n- ` + "`" + `temperature` + "`" + `: 0.0-2.0 (0.0 = deterministic, 1.0+ = creative)\n\n### System Prompts\n\nWrite clear, specific system prompts:\n- Define the agent's role and expertise\n- Specify input/output expectations\n- Include any formatting requirements\n- Add behavioral guidelines\n- Length: 50-2000 characters\n\n### Thread & Dialog\n\n**Thread** - for context between calls:\n- Add ` + "`" + `threads` + "`" + ` section with thread definitions\n- Reference in assistant with ` + "`" + `thread: { use: thread_name }` + "`" + `\n- Use when agents need conversation history\n\n**Dialog** - for multi-round conversations:\n- Add ` + "`" + `dialog: { max_rounds: N }` + "`" + ` to assistant\n- REQUIRES thread configuration\n- Use for interactive, iterative tasks\n\n## Generation Process\n\n1. **Parse Input**\n   - Extract agent specifications from analysis\n   - Apply any refinement_instructions\n   - Incorporate user_answers if provided\n\n2. **Design Types**\n   - Create type definitions for inputs/outputs\n   - Use appropriate constraints and validations\n   - Keep types focused and not over-complicated\n\n3. **Generate Assistants**\n   - Create assistant definitions with proper configuration\n   - Write clear, actionable system prompts\n   - Set appropriate model parameters\n\n4. **Add Threads/Dialogs** (if needed)\n   - Define threads for context sharing\n   - Add dialog configuration for multi-turn\n\n5. **Validate**\n   - Check all type references\n   - Verify enum values\n   - Ensure proper indentation (2 spaces)\n   - Validate constraint syntax\n\n6. **Document**\n   - Add YAML comments for clarity\n   - Note any assumptions or decisions\n   - Suggest improvements\n\n## Output Requirements\n\nProvide GeneratedConfig with:\n- Complete, valid YAML in ` + "`" + `yaml_content` + "`" + ` field\n- Structured representation in ` + "`" + `types` + "`" + ` and ` + "`" + `assistants` + "`" + ` arrays\n- Validation status and notes\n- Improvement suggestions\n- Implementation hints\n\n## Quality Standards\n\n- YAML must be valid and parseable\n- All type references must exist\n- System prompts must be specific and actionable\n- Appropriate models for task complexity\n- Proper indentation and formatting\n- Production-ready quality\n\n## Common Patterns\n\n**Simple Agent (no thread)**:\n` + "`" + `` + "`" + `` + "`" + `yaml\nassistants:\n  classifier:\n    use: openai\n    model: gpt-4o-mini\n    system_prompt: "Classify text into categories"\n    input_type: string\n    output_type: ClassificationResult\n` + "`" + `` + "`" + `` + "`" + `\n\n**Multi-Agent Pipeline (with thread)**:\n` + "`" + `` + "`" + `` + "`" + `yaml\nthreads:\n  pipeline_context:\n    provider: openai\n    strategy: append\n\nassistants:\n  analyzer:\n    use: openai\n    model: gpt-4o-mini\n    thread: { use: pipeline_context }\n    input_type: string\n    output_type: Analysis\n\n  generator:\n    use: openai\n    model: gpt-4o\n    thread: { use: pipeline_context }\n    input_type: Analysis\n    output_type: GeneratedContent\n` + "`" + `` + "`" + `` + "`" + `\n\n**Interactive Dialog Agent**:\n` + "`" + `` + "`" + `` + "`" + `yaml\nthreads:\n  conversation:\n    provider: openai\n    strategy: append\n    ttl_hours: 24\n\nassistants:\n  chatbot:\n    use: openai\n    model: gpt-4o\n    thread: { use: conversation }\n    dialog: { max_rounds: 10 }\n    input_type: UserMessage\n    output_type: BotResponse\n` + "`" + `` + "`" + `` + "`" + `\n\nRemember: Generate production-ready configurations that users can immediately deploy.\n`,
-				InputTypeName:  "GenerationInput",
-				OutputTypeName: "GeneratedConfig",
-				MaxTokens:      4500,
-				Temperature:    0.2,
-			},
-			Client: client,
-		},
-		threadBinding: &aiwf.ThreadBinding{
-			Name:     "generation_context",
-			Strategy: "append",
-		},
-	}
-}
-
-// Run executes the yaml_generator agent
-func (a *YamlGeneratorAgent) Run(ctx context.Context, input GenerationInput) (*GeneratedConfig, *aiwf.Trace, error) {
-	// Validate input
-	if err := ValidateGenerationInput(&input); err != nil {
-		return nil, nil, fmt.Errorf("validation failed: %w", err)
-	}
-
-	// Call model
-	result, trace, err := a.CallModel(ctx, input, nil)
-	if err != nil {
-		return nil, trace, err
-	}
-
-	// Parse response
-	var output GeneratedConfig
-	if err := json.Unmarshal(result, &output); err != nil {
-		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &output, trace, nil
-}
-
-// RunWithThread executes the yaml_generator agent with thread state
-func (a *YamlGeneratorAgent) RunWithThread(ctx context.Context, input GenerationInput, thread *aiwf.ThreadState) (*GeneratedConfig, *aiwf.Trace, error) {
-	if err := ValidateGenerationInput(&input); err != nil {
-		return nil, nil, fmt.Errorf("validation failed: %w", err)
-	}
-
-	result, trace, err := a.CallModel(ctx, input, thread)
-	if err != nil {
-		return nil, trace, err
-	}
-
-	var output GeneratedConfig
-	if err := json.Unmarshal(result, &output); err != nil {
-		return nil, trace, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &output, trace, nil
-}
-
-// ThreadBinding returns thread configuration for yaml_generator
-func (a *YamlGeneratorAgent) ThreadBinding() *aiwf.ThreadBinding {
 	return a.threadBinding
 }
 

@@ -211,9 +211,9 @@ types:
     tags: string[]                 # Массив строк
     scores: number[]               # Массив чисел
 
-    # Словари
-    metadata: map(string, any)     # map[string]interface{}
-    scores_map: map(string, number) # map[string]float64
+    # Key-Value пары (вместо словарей)
+    # Создайте вспомогательный тип:
+    metadata: $MetadataItem[]      # Массив пар ключ-значение
 
     # Ссылки на другие типы
     author: User                   # Вложенный тип User
@@ -232,13 +232,18 @@ types:
     age: int(0..150)
     role: enum(admin, user, guest)
 
+  # Вспомогательный тип для metadata
+  MetadataItem:
+    key: string(1..100)
+    value: string
+
   BlogPost:
     id: uuid
     title: string(1..200)
     content: string(10..10000)
     author: User                   # Вложенный User
     tags: string[](max:5)          # До 5 тегов
-    metadata: map(string, any)     # Дополнительные данные
+    metadata: $MetadataItem[]      # Дополнительные данные (key-value)
     published: bool
     created: datetime
 ```

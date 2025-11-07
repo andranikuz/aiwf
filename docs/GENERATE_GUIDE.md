@@ -479,6 +479,91 @@ Your answer: yes
 - Валидация сгенерированного YAML
 - Предложения по улучшению
 
+### Структура GeneratedConfig
+
+`GeneratedConfig` содержит полную информацию о сгенерированной конфигурации:
+
+```go
+type GeneratedConfig struct {
+    Version       string              // "0.3"
+    GeneratedAt   string              // ISO timestamp
+
+    // Типы данных
+    TypeCount     int
+    Types         []TypeDefinition    // Пользовательские типы
+
+    // Агенты
+    AgentCount    int
+    Assistants    []AssistantConfig   // Конфигурации агентов
+
+    // Валидация
+    ValidationStatus string            // "valid", "warning", "invalid"
+    ValidationNotes  []ValidationNote  // Заметки о валидации
+
+    // Дополнительно
+    Notes                   []string  // Заметки о конфигурации
+    ImprovementSuggestions  []string  // Предложения по улучшению
+
+    // Финальный YAML
+    YamlContent    string             // Готовый YAML файл
+}
+```
+
+#### TypeReference - явная типизация
+
+Каждый агент содержит метаданные о типах входа/выхода:
+
+```go
+type TypeReference struct {
+    Name string  // Имя типа: "string", "Email", "UserData"
+    Kind string  // "primitive" или "custom"
+}
+
+type AssistantConfig struct {
+    Name            string
+    Use             string           // "openai", "grok", "anthropic"
+    Model           string
+    SystemPrompt    string
+
+    // Явные ссылки на типы с метаданными
+    InputTypeRef    *TypeReference   // Тип входа
+    OutputTypeRef   *TypeReference   // Тип выхода
+
+    MaxTokens       int
+    Temperature     float64
+    NeedsThread     bool
+    NeedsDialog     bool
+    DialogMaxRounds int
+}
+```
+
+**Примеры TypeReference:**
+
+Базовый тип (primitive):
+```json
+{
+  "input_type_ref": {
+    "name": "string",
+    "kind": "primitive"
+  }
+}
+```
+
+Пользовательский тип (custom):
+```json
+{
+  "output_type_ref": {
+    "name": "EmailAnalysis",
+    "kind": "custom"
+  }
+}
+```
+
+Это позволяет:
+- ✅ Валидировать что все custom типы определены в секции `types`
+- ✅ Четко различать примитивы от пользовательских структур
+- ✅ Генерировать корректный код SDK с правильными импортами
+
 ### Thread контекст
 
 Оба агента работают в одном thread:

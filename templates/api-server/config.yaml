@@ -11,11 +11,15 @@ types:
     text: string(1..5000)
     analysis_type: enum(sentiment, summary, keywords, language)
 
+  MetadataItem:
+    key: string(1..100)
+    value: string
+
   TextAnalysisResult:
     analysis_type: string
     result: string
     confidence: number(0.0..1.0)
-    metadata: map(string, any)
+    metadata: $MetadataItem[]
 
   # Типы для перевода
   TranslationRequest:

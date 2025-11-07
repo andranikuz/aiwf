@@ -23,14 +23,14 @@ func NewService(client aiwf.ModelClient) *Service {
 	}
 
 	// Initialize agents
-	task_analyzerAgent := NewTaskAnalyzerAgent(client)
-	task_analyzerAgent.Types = s // Inject TypeProvider
 	yaml_generatorAgent := NewYamlGeneratorAgent(client)
 	yaml_generatorAgent.Types = s // Inject TypeProvider
+	task_analyzerAgent := NewTaskAnalyzerAgent(client)
+	task_analyzerAgent.Types = s // Inject TypeProvider
 
 	s.agents = &Agents{
-		YamlGenerator: yaml_generatorAgent,
 		TaskAnalyzer: task_analyzerAgent,
+		YamlGenerator: yaml_generatorAgent,
 	}
 
 	return s
@@ -66,10 +66,10 @@ func (s *Service) GetTypeMetadata(typeName string) (any, error) {
 // GetInputTypeFor returns input type for an agent
 func (s *Service) GetInputTypeFor(agentName string) (string, any, error) {
 	switch agentName {
-	case "task_analyzer":
-		return "string", TypeMetadata["string"], nil
 	case "yaml_generator":
 		return "GenerationInput", TypeMetadata["GenerationInput"], nil
+	case "task_analyzer":
+		return "string", TypeMetadata["string"], nil
 	default:
 		return "", nil, fmt.Errorf("agent %s not found", agentName)
 	}
@@ -78,10 +78,10 @@ func (s *Service) GetInputTypeFor(agentName string) (string, any, error) {
 // GetOutputTypeFor returns output type for an agent
 func (s *Service) GetOutputTypeFor(agentName string) (string, any, error) {
 	switch agentName {
-	case "task_analyzer":
-		return "TaskAnalysis", TypeMetadata["TaskAnalysis"], nil
 	case "yaml_generator":
 		return "GeneratedConfig", TypeMetadata["GeneratedConfig"], nil
+	case "task_analyzer":
+		return "TaskAnalysis", TypeMetadata["TaskAnalysis"], nil
 	default:
 		return "", nil, fmt.Errorf("agent %s not found", agentName)
 	}

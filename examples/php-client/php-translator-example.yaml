@@ -1,0 +1,20 @@
+version: 0.3
+
+types:
+  TranslateRequest:
+    text: string(1..1000)
+    target_lang: enum(en, es, fr, de, ru, zh, ja)
+
+  TranslateResponse:
+    translated: string
+    confidence: number(0..1)
+    source_lang: string
+
+assistants:
+  translator:
+    use: openai
+    model: gpt-4o-mini
+    system_prompt: Translate text to target language accurately
+    input_type: $TranslateRequest
+    output_type: $TranslateResponse
+    temperature: 0.3

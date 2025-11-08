@@ -7,7 +7,8 @@ AIWF — фреймворк для построения типобезопасн
 ## Возможности
 
 - **Генерация типобезопасного SDK** из YAML-спецификаций
-- **HTTP API сервер** - мгновенное развертывание агентов как REST API (NEW!)
+- **HTTP API сервер** - мгновенное развертывание агентов как REST API
+- **HTTP клиенты** - легковесные клиенты для PHP, Python, TypeScript и др. (NEW!)
 - **Упрощённая система типов** с ограничениями (`string(1..100)`, `enum(...)` и т.д.)
 - **Мульти-агенты** со структурированными входами/выходами
 - **3 встроенных провайдера**: OpenAI, Grok (xAI), Anthropic (Claude)
@@ -29,14 +30,19 @@ go install ./cmd/aiwf
 ### Использование CLI
 
 ```bash
-# Генерация конфигурации из описания задачи (NEW!)
+# Генерация конфигурации из описания задачи
 aiwf generate --interactive
 
 # Валидация YAML-конфигурации
 aiwf validate -f config.yaml
 
-# Генерация SDK
+# Генерация Go SDK (полный SDK с runtime)
 aiwf sdk -f config.yaml -o ./generated
+
+# Генерация HTTP клиентов (NEW!)
+aiwf sdk -f config.yaml -l php -o ./client.php      # PHP
+aiwf sdk -f config.yaml -l python -o ./client.py    # Python (скоро)
+aiwf sdk -f config.yaml -l typescript -o ./client.ts # TypeScript (скоро)
 
 # Запуск HTTP API сервера
 aiwf serve -f config.yaml
@@ -78,8 +84,9 @@ assistants:
 ## Документация
 
 - [Getting Started Guide](./docs/GETTING_STARTED.md) - Руководство для начинающих
-- [Generate Guide](./docs/GENERATE_GUIDE.md) - AI-генерация конфигураций (NEW!)
+- [Generate Guide](./docs/GENERATE_GUIDE.md) - AI-генерация конфигураций
 - [HTTP Server Guide](./docs/SERVE_GUIDE.md) - Развертывание агентов как REST API
+- [Client Generation](./docs/CLIENT_GENERATION.md) - Генерация HTTP клиентов для разных языков (NEW!)
 - [Документация генератора](./generator/README.md) - YAML-спецификация и система типов
 - [Документация runtime](./runtime/README.md) - Runtime-контракты и интерфейсы
 - [Документация провайдеров](./providers/README.md) - Руководство по реализации провайдеров
